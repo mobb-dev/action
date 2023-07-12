@@ -1,0 +1,16 @@
+on: [push]
+
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    name: A test job to test the action
+    steps:
+      # To use this repository's private action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Mobb action step
+        uses: ./ # Uses an action in the root directory
+        with:
+          report-file: "/test/test.json"
+          api-key: "1234567890"

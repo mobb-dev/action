@@ -1,0 +1,16 @@
+# action.yml
+name: "Mobb"
+description: "Mobb analyzer automatic security fixer action"
+inputs:
+  report-file:
+    description: "Path to SAST report file"
+    required: true
+  api-key:
+    description: "Mobb API key"
+    required: true
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.api-key }}
+    - ${{ inputs.report-file }}
