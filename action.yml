@@ -1,0 +1,41 @@
+name: "Mobb"
+description: "Mobb analyzer automatic security fixer action"
+inputs:
+  report-file:
+    description: "Path to SAST report file"
+    required: true
+  api-key:
+    description: "Mobb API key"
+    required: true
+  github-token:
+    description: "GitaHub Token"
+    required: true
+outputs:
+  fix-report-url:
+    description: "Mobb fix report URL"
+    value: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v3.6.0
+      with:
+        node-version: 18
+    - id: run-npx-mobb-dev
+      run: |
+        REPO=$(git remote get-url origin)
+        REPO=${REPO%".git"}
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        OUT=$(npx --yes mobbdev@latest analyze --ci -r $REPO -b $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
+        RETVAL=$?
+        if [ $RETVAL -ne 0 ]; then
+          exit $RETVAL
+        fi
+        OUT=$(echo $OUT | tr '\n' ' ')
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+      shell: bash -l {0}
+    - uses: Sibz/github-status-action@v1
+      with:
+        authToken: ${{ inputs.github-token }}
+        context: "Mobb fix report link"
+        state: "success"
+        target_url: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
