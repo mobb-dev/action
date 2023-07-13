@@ -25,7 +25,7 @@ runs:
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        OUT=$(npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
+        OUT=$(npx --yes mobbdev@latest analyze --ci -r $REPO -b $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL

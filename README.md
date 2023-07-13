@@ -33,8 +33,8 @@ jobs:
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v3
-      # Make sure you run a SAST scan so the report file exists in the relevant path
       - run: |
+          # Run a SAST scan using a supprted tool, Snyk as an example
           npx snyk auth ${{ secrets.SNYK_API_KEY }}
           ! npx snyk code test --sarif-file-output=/home/runner/report.json ./
         shell: bash -l {0}
