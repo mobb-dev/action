@@ -1,6 +1,6 @@
-# Mobb analyze GitHub action
+# Mobb GitHub action
 
-This action posts the current PR code and a SAST report to Mobb security analysis and prints the URL of the fix report to the workflow log. If you are using this on a private repo then the Mobb user the API key belongs to must have access to the repo and must approve github access for the user on the Mobb platform beforehand.
+This action posts the code and a SAST report to the Mobb vulnerability analysis engine and links the URL of the fix report to the PR. If you are using this on a private repo then the Mobb user the API key belongs to must have access to the repo and must approve github access for the user on the Mobb platform beforehand.
 
 ## Inputs
 
