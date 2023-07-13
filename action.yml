@@ -40,7 +40,4 @@ runs:
         token: ${{ inputs.github-token }}
         name: Test With Details
         conclusion: success
-        output: |
-          {"summary":"Test was a success","text_description": ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }} }
-        #action_url: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
-        #details_url: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+        output: {"summary":"Test was a success","text_description": ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }} }
