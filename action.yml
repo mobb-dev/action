@@ -23,6 +23,7 @@ runs:
         node-version: 18
     - id: run-npx-mobb-dev
       run: |
+        set -x
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
@@ -30,7 +31,7 @@ runs:
         # npx --yes mobbdev@latest analyze --help
         # DEBUG=* npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
         echo "fix-report-url=$(! npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})" >> $GITHUB_OUTPUT
-        echo $!
+        echo $?
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
       with:
