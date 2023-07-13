@@ -20,7 +20,19 @@ The Mobb fix report URL.
 
 ## Example usage
 
-uses: mobbdev/action@v1
-with:
-report-file: '/path/to/report.json'
-api-key: '1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+```
+jobs:
+  test_job:
+    runs-on: ubuntu-latest
+    steps:
+      # To use this action,
+      # you must check out the repository
+      - name: Checkout
+        uses: actions/checkout@v3
+      # Make you run a SAST scan so the report file exists in the relevant path
+      - name: Mobb action step
+        uses: mobbdev/action@v1
+        with:
+          report-file: "/path/to/report.json"
+          api-key: "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+```
