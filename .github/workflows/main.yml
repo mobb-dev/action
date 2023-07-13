@@ -14,3 +14,4 @@ jobs:
         with:
           report-file: "/test/test.json"
           api-key: "1234567890"
+          github-token: ${{ secrets.GITHUB_TOKEN }}

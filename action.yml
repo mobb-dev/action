@@ -8,6 +8,9 @@ inputs:
   api-key:
     description: "Mobb API key"
     required: true
+  github-token:
+    description: "GitaHub Token"
+    required: true
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
@@ -31,7 +34,7 @@ runs:
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ inputs.github-token }}
         name: Test With Details
         conclusion: success
         output: |
