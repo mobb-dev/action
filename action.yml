@@ -41,4 +41,4 @@ runs:
         name: Test With Details
         conclusion: success
         output: |
-          {"summary":"Test was a success","text_description": ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }} }
+          {"summary":"Test was a success","text_description": "${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}"" }
