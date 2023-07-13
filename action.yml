@@ -34,7 +34,7 @@ runs:
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
-        echo "fix-report-url=https://example.com?$OUT" >> $GITHUB_OUTPUT
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
       with:
