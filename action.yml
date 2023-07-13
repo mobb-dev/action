@@ -39,5 +39,5 @@ runs:
         token: ${{ inputs.github-token }}
         name: Mobb fix report link
         conclusion: success
-        action_url: https://example.com/action?${{steps.run-npx-mobb-dev.outputs.fix-report-url}}
-        details_url: https://example.com/details?${{steps.run-npx-mobb-dev.outputs.fix-report-url}}
+        action_url: https://example.com/action
+        details_url: https://example.com/details
