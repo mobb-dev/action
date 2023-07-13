@@ -32,11 +32,10 @@ runs:
         # DEBUG=* npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
         echo "fix-report-url=$(! npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})" >> $GITHUB_OUTPUT
         echo $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
         echo $?
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
-      env:
-        ACTIONS_RUNNER_DEBUG: true
       with:
         token: ${{ inputs.github-token }}
         name: Test With Details
