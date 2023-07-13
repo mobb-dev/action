@@ -1,5 +1,5 @@
-name: "Mobb"
-description: "Mobb analyzer automatic security fixer action"
+name: "mobbdev"
+description: "Mobb automatic vulnerability fixer action"
 inputs:
   report-file:
     description: "Path to SAST report file"
