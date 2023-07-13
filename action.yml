@@ -34,6 +34,14 @@ runs:
         OUT=$(echo $OUT | tr '\n' ' ')
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
+    - uses: Sibz/github-status-action@v1
+      with:
+        authToken: ${{ inputs.github-token }}
+        context: "Mobb fix report link"
+        description: "Mobb fix report link"
+        state: "success"
+        sha: ${{github.event.pull_request.head.sha || github.sha}}
+        target_url: https://example.com/action
     - uses: LouisBrunner/checks-action@v1.3.1
       with:
         token: ${{ inputs.github-token }}
