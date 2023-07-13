@@ -34,6 +34,8 @@ runs:
         echo $?
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
+      env:
+        ACTIONS_RUNNER_DEBUG: true
       with:
         token: ${{ inputs.github-token }}
         name: Test With Details
