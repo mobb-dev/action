@@ -1,5 +1,7 @@
 name: "mobbdev"
 description: "Mobb automatic vulnerability fixer action"
+icon: aperture
+color: blue
 inputs:
   report-file:
     description: "Path to SAST report file"
