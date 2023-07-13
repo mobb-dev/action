@@ -41,7 +41,7 @@ jobs:
           ! npx snyk code test --sarif-file-output=/home/runner/report.json ./
         shell: bash -l {0}
       - name: Mobb action step
-        uses: mobb-dev/action@v2
+        uses: mobb-dev/action@v1
         with:
           report-file: "/home/runner/report.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
