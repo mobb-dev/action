@@ -14,7 +14,7 @@ This action posts the current PR code and a SAST report to mobb analyze and prin
 
 ## Outputs
 
-## `url`
+## `fix-report-url`
 
 The Mobb fix report URL.
 

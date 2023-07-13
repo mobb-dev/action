@@ -1,4 +1,3 @@
-# action.yml
 name: "Mobb"
 description: "Mobb analyzer automatic security fixer action"
 inputs:
@@ -39,4 +38,4 @@ runs:
         authToken: ${{ inputs.github-token }}
         context: "Mobb fix report link"
         state: "success"
-        target_url: https://example.com/action?${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+        target_url: https://example.com?${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}

@@ -9,9 +9,15 @@ jobs:
       # you must check out the repository
       - name: Checkout
         uses: actions/checkout@v3
+      - uses: actions/setup-node@v3.6.0
+        with:
+          node-version: 18
+      - run: |
+          npx snyk code test --sarif-file-output=/home/runner/report.json ./
+        shell: bash -l {0}
       - name: Mobb action step
         uses: ./ # Uses an action in the root directory
         with:
-          report-file: "/test/test.json"
-          api-key: "1234567890"
+          report-file: "/home/runner/report.json"
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
