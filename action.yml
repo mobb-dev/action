@@ -31,6 +31,7 @@ runs:
         # npx --yes mobbdev@latest analyze --help
         # DEBUG=* npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
         echo "fix-report-url=$(! npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})" >> $GITHUB_OUTPUT
+        echo $GITHUB_OUTPUT
         echo $?
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
@@ -41,4 +42,4 @@ runs:
         name: Test With Details
         conclusion: success
         output: |
-          {"summary":"Test  was a success","text_description": "${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}"" }
+          {"summary":"Test  was a success","text_description": "xxxx"}
