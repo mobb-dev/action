@@ -42,3 +42,4 @@ runs:
         context: "Mobb fix report link"
         state: "success"
         target_url: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+        sha: ${{github.event.pull_request.head.sha || github.sha}}
