@@ -32,7 +32,7 @@ runs:
         # DEBUG=* npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
         OUT=$(npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})
         OUT=$(echo $OUT | tr '\n' ' ')
-        echo "fix-report-url=$(OUT)" >> $GITHUB_OUTPUT
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
         echo $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
         echo $?
@@ -43,4 +43,4 @@ runs:
         name: Test With Details
         conclusion: success
         output: |
-          {"summary":"Test  was a success","text_description": "xxxx"}
+          {"summary":"Test  was a success","text_description": ${{steps.run-npx-mobb-dev.outputs.fix-report-url}} }
