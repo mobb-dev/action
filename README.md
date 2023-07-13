@@ -25,6 +25,8 @@ The Mobb fix report URL.
 ## Example usage
 
 ```
+on: [pull_request]
+
 jobs:
   test_job:
     runs-on: ubuntu-latest
