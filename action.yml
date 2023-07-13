@@ -38,6 +38,6 @@ runs:
       with:
         token: ${{ inputs.github-token }}
         name: Mobb fix report link
-        conclusion: success
+        conclusion: action_required
         action_url: https://example.com/action
         details_url: https://example.com/details
