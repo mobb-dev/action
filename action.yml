@@ -27,13 +27,14 @@ runs:
       run: |
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
-        OUT=$(npx --yes mobbdev@latest analyze --ci -r $REPO -b $GITHUB_HEAD_REF --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
+        BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+        OUT=$(npx --yes mobbdev@latest analyze --ci -r $REPO -b $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
-        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        echo "fix-report-url=https://example.com?$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
       with:
