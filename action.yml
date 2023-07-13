@@ -26,11 +26,10 @@ runs:
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        npm config set unsafe-perm true
         echo npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
         # npx --yes mobbdev@latest analyze --help
         # DEBUG=* npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }}
-        echo "fix-report-url=$(npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})" >> $GITHUB_OUTPUT
+        echo "fix-report-url=$(npx --yes mobbdev@latest analyze -y -r $REPO -b $BRANCH -k ${{ inputs.api-key }} -f ${{ inputs.report-file }})" >> $GITHUB_OUTPUT 2> /dev/null
       shell: bash -l {0}
     - uses: LouisBrunner/checks-action@v1.3.1
       with:
