@@ -25,25 +25,43 @@ The Mobb fix report URL.
 ## Example usage
 
 ```
+# This example utilizes Mobb with Checkmarx via GitHub Actions
+
 on: [pull_request]
 
 jobs:
-  test_job:
+  Checkmarx-Mobb-example:
     runs-on: ubuntu-latest
+    name: Fix Checkmarx findings with Mobb
+
     steps:
-      # To use this action,
-      # you must check out the repository
-      - name: Checkout
+      - name: Checkout repo to get code
         uses: actions/checkout@v3
-      - run: |
-          # Run a SAST scan using a supprted tool, Snyk as an example
-          npx snyk auth ${{ secrets.SNYK_API_KEY }}
-          ! npx snyk code test --sarif-file-output=/home/runner/report.json ./
+
+      - name: Setup Node on this machine
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: 18
+
+      - name: Download and configure Checkmarx CLI
+        run: |
+          wget https://github.com/Checkmarx/ast-cli/releases/download/2.0.54/ast-cli_2.0.54_linux_x64.tar.gz -O checkmarx.tar.gz
+          tar -xf checkmarx.tar.gz
+          ./cx configure set --prop-name cx_apikey --prop-value ${{ secrets.CX_API_KEY }}
+          ./cx configure set --prop-name cx_base_auth_uri --prop-value ${{ secrets.CX_BASE_AUTH_URI }}
+          ./cx configure set --prop-name cx_base_uri --prop-value ${{ secrets.CX_BASE_URI }}
+          ./cx configure set --prop-name cx_tenant --prop-value ${{ secrets.CX_TENANT }}
         shell: bash -l {0}
-      - name: Mobb action step
+
+      - name: Run Checkmarx SAST scan
+        run: ./cx scan create --project-name my-test-project -s ./ --report-format json --scan-types sast --branch nobranch  --threshold "sast-high=1"
+        shell: bash -l {0}
+
+      - name: Run Mobb on the findings and get fixes
+        if: always()
         uses: mobb-dev/action@v1
         with:
-          report-file: "/home/runner/report.json"
+          report-file: "cx_result.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
