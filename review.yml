@@ -1,0 +1,53 @@
+name: "mobbdev"
+description: "Mobb automatic vulnerability fixer action"
+branding:
+  icon: aperture
+  color: blue
+inputs:
+  report-file:
+    description: "Path to SAST report file"
+    required: true
+  api-key:
+    description: "Mobb API key"
+    required: true
+  github-token:
+    description: "GitaHub Token"
+    required: true
+  scanner:
+    description: "SAST scanner(codeql, snyk, checkmarx, fortify)"
+    required: true
+outputs:
+  fix-report-url:
+    description: "Mobb fix report URL"
+    value: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v3.6.0
+      with:
+        node-version: 18
+    - id: run-npx-mobb-dev
+      run: |
+        REPO=$(git remote get-url origin)
+        REPO=${REPO%".git"}
+        GITHUB_TOKEN=${{ inputs.github-token }}
+        SCANNER=${{ inputs.scanner }}
+        
+        PR_NUMBER=$(echo "${{ github.event.pull_request.url }}" | grep -oE "[0-9]+")
+# TODO change 'testing-bugsy' to 'mobbdev'
+        OUT=$(npx --yes testing-bugsy@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $GITHUB_SHA --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER)
+        RETVAL=$?
+        if [ $RETVAL -ne 0 ]; then
+          exit $RETVAL
+        fi
+        OUT=$(echo $OUT | tr '\n' ' ')
+       
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+      shell: bash -l {0}
+    - uses: Sibz/github-status-action@v1
+      with:
+        authToken: ${{ inputs.github-token }}
+        context: "Mobb fix report link"
+        state: "success"
+        target_url: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
+        sha: ${{github.event.pull_request.head.sha || github.sha}}
