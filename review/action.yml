@@ -33,7 +33,7 @@ runs:
         GITHUB_TOKEN=${{ inputs.github-token }}
         SCANNER=${{ inputs.scanner }}
         
-        PR_NUMBER=$(echo "${{ github.event.pull_request.url }}" | grep -oE "[0-9]+$")
+         PR_NUMBER=${{ github.event.pull_request.number }}
         OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $GITHUB_SHA --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER)
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
