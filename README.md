@@ -16,7 +16,7 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 **Required** The GitHub api token to use with the action. Usually available as `${{ secrets.GITHUB_TOKEN }}`.
 
-## `mobb-project-name`
+## `mobb-project-name` 
 
 **Optional** The Mobb Project Name where the fix analysis will be stored. If this is not specified, it will the analysis will default into the "My first project". 
 
