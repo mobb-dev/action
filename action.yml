@@ -13,6 +13,10 @@ inputs:
   github-token:
     description: "GitaHub Token"
     required: true
+  mobb-project-name:
+    description: "Mobb Project Name"
+    required: false
+    default: 'My first project'
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
