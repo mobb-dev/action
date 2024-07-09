@@ -34,7 +34,7 @@ runs:
         SCANNER=${{ inputs.scanner }}
         
         PR_NUMBER=${{ github.event.pull_request.number }}
-        OUT=$(npx --yes testing-bugsy@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $GITHUB_SHA --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER)
+        OUT=$(DEBUG=* npx --yes testing-bugsy@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $GITHUB_SHA --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER)
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
