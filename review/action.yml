@@ -23,9 +23,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/checkout@v3
-      with:
-        ref: ${{ github.head_ref }}
     - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
@@ -35,7 +32,7 @@ runs:
         REPO=${REPO%".git"}
         GITHUB_TOKEN=${{ inputs.github-token }}
         SCANNER=${{ inputs.scanner }}
-        COMMIT_HASH=$(git rev-parse ${{ github.head_ref }}) 
+        COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
         OUT=$(DEBUG=* npx --yes testing-bugsy@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p .)
         RETVAL=$?
