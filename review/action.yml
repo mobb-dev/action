@@ -34,13 +34,13 @@ runs:
         SCANNER=${{ inputs.scanner }}
         COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
-        OUT=$(DEBUG=* npx --yes testing-bugsy@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p .)
+        OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p .)
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
-       
+
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
