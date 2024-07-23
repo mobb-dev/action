@@ -27,8 +27,8 @@ runs:
       with:
         name: vul-report
         path: ${{ inputs.report-file }}
-        run:  echo 'Artifact ID is ${{ steps.artifact-upload-step.outputs.artifact-id }}' 
-    - id: download vul report
+        run:  echo "Artifact ID is ${{ steps.artifact-upload-step.outputs.artifact-id }}"
+    - id: download-vul-report
       run: | 
             echo "url is: https://api.github.com/repos/$GITHUB_REPOSITORY_OWNER/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.artifact-upload-step.outputs.artifact-id }}/zip" 
             curl -L \
@@ -38,8 +38,9 @@ runs:
               -o vul_report.zip \ 
               https://api.github.com/repos/$GITHUB_REPOSITORY_OWNER/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.artifact-upload-step.outputs.artifact-id }}/zip
             sudo apt-get install -y unzip
-            mkdir report2
-            unzip vul_report.zip -d report2
+            rm -rf report
+            mkdir report
+            unzip vul_report.zip -d report
       
 
     # - id: download vul report
