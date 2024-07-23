@@ -23,6 +23,17 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - id: upload vul report
+    - uses: actions/upload-artifact@v4
+      with:
+      
+        name: vul-report
+        path: ${{ inputs.report-file }}
+        run:  echo 'Artifact ID is ${{ steps.artifact-upload-step.outputs.artifact-id }}'
+    # - id: download vul report
+      # run: |
+        # curl -L -o downloaded_file.zip h    - name: Output artifact ID
+      
     - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
