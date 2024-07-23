@@ -45,7 +45,7 @@ runs:
               -H "X-GitHub-Api-Version: 2022-11-28" \
               -o vul_report.zip \
               https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip
-            unzip vul_report.zip
+            unzip -d results vul_report.zip
       shell: bash -l {0}
       
 
