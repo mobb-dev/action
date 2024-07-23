@@ -37,7 +37,7 @@ runs:
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ inputs.github-token }}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              -o vul_report.zip \ 
+              -o vul_report.zip \
               https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip
             sudo apt-get install -y unzip
             rm -rf report
