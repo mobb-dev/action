@@ -6,6 +6,7 @@ jobs:
     name: A test job to test the action
     permissions:
       statuses: write
+      pull-requests: write
     steps:
       # To use this repository's private action,
       # you must check out the repository
