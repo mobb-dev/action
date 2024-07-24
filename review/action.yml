@@ -46,7 +46,7 @@ runs:
           -o vul_report.zip \
           https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip
         ls -l
-        unzip -d results vul_report.zip
+        #unzip -d results vul_report.zip
       shell: bash -l {0}
     - uses: actions/setup-node@v3.6.0
       with:
