@@ -27,6 +27,30 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - uses: actions/upload-artifact@v4
+      id: vul-report-upload
+      with:
+        name: vul-report
+        path: ${{ inputs.report-file }}
+        run: echo "Artifact ID is ${{ steps.vul-report-upload.outputs.artifact-id }}"
+        shell: bash -l {0}
+
+    - uses: actions/checkout@v3
+      name: checkout-to-branch
+      with:
+        ref: ${{ github.head_ref }}
+
+    - id: download-vul-report
+      run: |
+        echo "url is: https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip" 
+        curl -L \
+          -H "Accept: application/vnd.github+json" \
+          -H "Authorization: Bearer ${{ inputs.github-token }}" \
+          -H "X-GitHub-Api-Version: 2022-11-28" \
+          -o vul_report.zip \
+          https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip
+        unzip -d results vul_report.zip
+      shell: bash -l {0}
     - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
@@ -36,15 +60,16 @@ runs:
         REPO=${REPO%".git"}
         GITHUB_TOKEN=${{ inputs.github-token }}
         SCANNER=${{ inputs.scanner }}
-        
+        COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
-        OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $GITHUB_SHA --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER --mobb-project-name ${{ inputs.mobb-project-name }})
+        VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
+        OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p . --mobb-project-name ${{ inputs.mobb-project-name }})
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
-       
+
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1

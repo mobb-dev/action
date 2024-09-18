@@ -3,6 +3,8 @@ on: [pull_request]
 jobs:
   test_job:
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     name: A test job to test the action
     steps:
       # To use this repository's private action,
