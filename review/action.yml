@@ -27,6 +27,7 @@ runs:
       run: 
         echo "ACTIONS_RUNTIME_TOKEN is $ACTIONS_RUNTIME_TOKEN"
         echo "ACTIONS_CACHE_URL is $ACTIONS_CACHE_URL"
+      shell: bash -l {0}
 
     - uses: actions/upload-artifact@v4
       id: vul-report-upload
