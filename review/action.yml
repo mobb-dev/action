@@ -42,7 +42,7 @@ runs:
       shell: bash -l {0}
 
     - id: print-shell-env
-      run: 
+      run: |
         echo "ACTIONS_RUNTIME_TOKEN is $ACTIONS_RUNTIME_TOKEN"
         echo "ACTIONS_CACHE_URL is $ACTIONS_CACHE_URL"
       shell: bash -l {0}
