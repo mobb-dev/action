@@ -23,11 +23,28 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
+    
+    - name: Dump job context
+      env:
+        JOB_CONTEXT: ${{ toJson(job) }}
+      run: echo "$JOB_CONTEXT"
+    
+    - name: Dump runner context
+      env:
+        RUNNER_CONTEXT: ${{ toJson(runner) }}
+      run: echo "$RUNNER_CONTEXT"
+
     - id: print-shell-env
       run: 
         echo "ACTIONS_RUNTIME_TOKEN is $ACTIONS_RUNTIME_TOKEN"
         echo "ACTIONS_CACHE_URL is $ACTIONS_CACHE_URL"
       shell: bash -l {0}
+      env:
+          GH_REPO: ${{ github.repository }}
 
     - uses: actions/upload-artifact@v4
       id: vul-report-upload
