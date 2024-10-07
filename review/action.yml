@@ -23,7 +23,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - id: download-vul-report
+    - id: print-shell-env
       run: 
         echo "ACTIONS_RUNTIME_TOKEN is $ACTIONS_RUNTIME_TOKEN"
         echo "ACTIONS_CACHE_URL is $ACTIONS_CACHE_URL"
