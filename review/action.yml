@@ -23,6 +23,11 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - id: download-vul-report
+      run: 
+        echo "ACTIONS_RUNTIME_TOKEN is $ACTIONS_RUNTIME_TOKEN"
+        echo "ACTIONS_CACHE_URL is $ACTIONS_CACHE_URL"
+
     - uses: actions/upload-artifact@v4
       id: vul-report-upload
       with:
