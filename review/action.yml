@@ -57,7 +57,6 @@ runs:
         COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
-        npx --yes mobbdev@latest
         OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p .)
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
