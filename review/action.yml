@@ -50,6 +50,8 @@ runs:
 
     - id: run-npx-mobb-dev
       run: |
+        cd ./clients/cli
+        pnpm run test
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         GITHUB_TOKEN=${{ inputs.github-token }}
