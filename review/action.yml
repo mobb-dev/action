@@ -23,6 +23,7 @@ outputs:
 runs:
   using: "composite"
   steps:
+    # save report since the checkout step deletes it
     - uses: actions/upload-artifact@v4
       id: vul-report-upload
       with:
@@ -31,25 +32,22 @@ runs:
         run: echo "Artifact ID is ${{ steps.vul-report-upload.outputs.artifact-id }}"
         shell: bash -l {0}
 
+    # needed since we get wrong hash. this step deletes the report file, so need to save it beforehand
     - uses: actions/checkout@v3
       name: checkout-to-branch
       with:
         ref: ${{ github.head_ref }}
 
-    - id: download-vul-report
-      run: |
-        echo "url is: https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip" 
-        curl -L \
-          -H "Accept: application/vnd.github+json" \
-          -H "Authorization: Bearer ${{ inputs.github-token }}" \
-          -H "X-GitHub-Api-Version: 2022-11-28" \
-          -o vul_report.zip \
-          https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/${{ steps.vul-report-upload.outputs.artifact-id }}/zip
-        unzip -d results vul_report.zip
-      shell: bash -l {0}
+    # restore the report file
+    - uses: actions/download-artifact@v4
+      with:
+        name: vul-report
+        path: results
+
     - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
+
     - id: run-npx-mobb-dev
       run: |
         REPO=$(git remote get-url origin)
@@ -68,6 +66,7 @@ runs:
 
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
       shell: bash -l {0}
+
     - uses: Sibz/github-status-action@v1
       with:
         authToken: ${{ inputs.github-token }}
