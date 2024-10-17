@@ -20,6 +20,10 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 **Optional** The Mobb Project Name where the fix analysis will be stored. If this is not specified, it will the analysis will default into the "My first project". 
 
+## `auto-pr` 
+
+**Optional** `true` or `false`. Enables Automatic Pull Request for fresh fixes. 
+
 ## Outputs
 
 ## `fix-report-url`
