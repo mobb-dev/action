@@ -22,7 +22,6 @@ inputs:
   auto-pr:
     description: "Auto-PR flag"
     required: false
-    default: false
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
