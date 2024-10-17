@@ -35,7 +35,7 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p ."
+        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}"
         
         # Check if mobb-project-name exists and append it
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
