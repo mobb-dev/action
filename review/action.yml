@@ -19,7 +19,10 @@ inputs:
   mobb-project-name:
     description: "Mobb Project Name"
     required: false
-    default: 'My first project'
+  auto-pr:
+    description: "Auto-PR flag"
+    required: false
+    default: false
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
@@ -63,7 +66,24 @@ runs:
         COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
-        OUT=$(npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p . --mobb-project-name "${{ inputs.mobb-project-name }}")
+        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p ."
+        
+        # Check if mobb-project-name exists and append it
+        if [ -n "${{ inputs.mobb-project-name }}" ]; then
+          echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
+          MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
+        fi
+
+        # Check if auto-pr flag is set append it
+        if [ -n "${{ inputs.auto-pr }}" ]; then
+          echo "Auto-PR flag is set"
+          MobbExecString+=" --auto-pr"
+        fi
+
+        # Output the final command string for debugging
+        echo "Mobb Command: $MobbExecString"
+        OUT=$(eval $MobbExecString)
+        
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
