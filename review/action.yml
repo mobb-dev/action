@@ -81,6 +81,8 @@ runs:
         OUT=$(echo $OUT | tr '\n' ' ')
 
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        echo "Mobb URL: $OUT"
+        
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
       with:
