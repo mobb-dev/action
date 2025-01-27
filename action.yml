@@ -19,6 +19,10 @@ inputs:
   auto-pr:
     description: "Auto-PR flag"
     required: false
+  commit-directly:
+    description: "Commit Directly flag, this requires Auto-PR flag to be set. Once enabled, Mobb will commit the fixes directly to the branch"
+    required: false
+
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
