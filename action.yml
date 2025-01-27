@@ -48,9 +48,15 @@ runs:
         fi
 
         # Check if auto-pr flag is set append it
-        if [ -n "${{ inputs.auto-pr }}" ]; then
+        if [ "${{ inputs.auto-pr }}" == "true" ]; then
           echo "Auto-PR flag is set"
           MobbExecString+=" --auto-pr"
+        fi
+
+        # Check if commit-directly flag is set append it to the Mobb CLI command
+        if [ "${{ inputs.commit-directly }}" == "true" ]; then
+          echo "Commit Directly flag is set"
+          MobbExecString+=" --commit-directly"
         fi
 
         # Output the final command string for debugging and execute it
