@@ -16,6 +16,19 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 **Required** The GitHub api token to use with the action. Usually available as `${{ secrets.GITHUB_TOKEN }}`.
 
+## `mobb-project-name` 
+
+**Optional** The Mobb Project Name where the fix analysis will be stored. If this is not specified, it will the analysis will default into the "My first project". 
+
+## `auto-pr` 
+
+**Optional** `true` or `false`. Enables Automatic Pull Request for fresh fixes. 
+
+## `commit-directly`
+
+**Optional** `true` or `false`. This requires `auto-pr` to be set to `true`. Once set, Fixes will be committed directly to the source branch. 
+
+
 ## Outputs
 
 ## `fix-report-url`

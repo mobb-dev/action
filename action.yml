@@ -13,6 +13,16 @@ inputs:
   github-token:
     description: "GitaHub Token"
     required: true
+  mobb-project-name:
+    description: "Mobb Project Name"
+    required: false
+  auto-pr:
+    description: "Auto-PR flag"
+    required: false
+  commit-directly:
+    description: "Commit Directly flag, this requires Auto-PR flag to be set. Once enabled, Mobb will commit the fixes directly to the branch"
+    required: false
+
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
@@ -28,13 +38,39 @@ runs:
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-        OUT=$(npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }})
+
+        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}"
+        
+        # Check if mobb-project-name exists and append it
+        if [ -n "${{ inputs.mobb-project-name }}" ]; then
+          echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
+          MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
+        fi
+
+        # Check if auto-pr flag is set append it
+        if [ "${{ inputs.auto-pr }}" == "true" ]; then
+          echo "Auto-PR flag is set"
+          MobbExecString+=" --auto-pr"
+        fi
+
+        # Check if commit-directly flag is set append it to the Mobb CLI command
+        if [ "${{ inputs.commit-directly }}" == "true" ]; then
+          echo "Commit Directly flag is set"
+          MobbExecString+=" --commit-directly"
+        fi
+
+        # Output the final command string for debugging and execute it
+        echo "Mobb Command: $MobbExecString"
+        OUT=$(eval $MobbExecString)
+        
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        echo "Mobb URL: $OUT"
+        
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
       with:
