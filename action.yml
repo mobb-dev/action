@@ -57,6 +57,15 @@ runs:
         if [ "${{ inputs.commit-directly }}" == "true" ]; then
           echo "Commit Directly flag is set"
           MobbExecString+=" --commit-directly"
+
+          # Check if the action is running in the context of a pull request
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            PR_ID="${{ github.event.pull_request.number }}"
+            echo "Pull Request ID detected: $PR_ID"
+            MobbExecString+=" --pr-id $PR_ID"
+          else
+            echo "No Pull Request detected. Skipping --pr-id flag."
+          fi
         fi
 
         # Output the final command string for debugging and execute it
