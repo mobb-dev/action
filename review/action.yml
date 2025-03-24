@@ -60,8 +60,8 @@ runs:
         COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
-        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER -p ."
-        
+        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
+
         # Check if mobb-project-name exists and append it
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
           echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
@@ -71,7 +71,7 @@ runs:
         # Output the final command string for debugging
         echo "Mobb Command: $MobbExecString"
         OUT=$(eval $MobbExecString)
-        
+
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
@@ -80,7 +80,7 @@ runs:
 
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
         echo "Mobb URL: $OUT"
-        
+
       shell: bash -l {0}
 
     - uses: Sibz/github-status-action@v1
