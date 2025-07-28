@@ -22,6 +22,9 @@ inputs:
   commit-directly:
     description: "Commit Directly flag, this requires Auto-PR flag to be set. Once enabled, Mobb will commit the fixes directly to the branch"
     required: false
+  organization-id:
+    description: "Organization ID"
+    required: false
 
 outputs:
   fix-report-url:
@@ -45,6 +48,12 @@ runs:
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
           echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
           MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
+        fi
+
+        # Check if organization-id exists and append it
+        if [ -n "${{ inputs.organization-id }}" ]; then
+          echo "organization-id specified: ${{ inputs.organization-id }}"
+          MobbExecString+=" --organization-id \"${{ inputs.organization-id }}\""
         fi
 
         # Check if auto-pr flag is set append it
