@@ -70,12 +70,7 @@ runs:
 
         # Output the final command string for debugging
         echo "Mobb Command: $MobbExecString"
-        OUT=$(eval $MobbExecString)
-
-        RETVAL=$?
-        if [ $RETVAL -ne 0 ]; then
-          exit $RETVAL
-        fi
+        OUT=$(eval $MobbExecString || true)
         OUT=$(echo $OUT | tr '\n' ' ')
 
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
