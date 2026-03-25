@@ -33,7 +33,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v3.6.0
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
         node-version: 18
     - id: run-npx-mobb-dev
@@ -42,55 +42,66 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}"
-        
+        MOBB_ARGS=(
+          npx --yes mobbdev@latest analyze --ci
+          -r "$REPO"
+          --ref "$BRANCH"
+          --api-key "$MOBB_API_KEY"
+          -f "$REPORT_FILE"
+        )
+
         # Check if mobb-project-name exists and append it
-        if [ -n "${{ inputs.mobb-project-name }}" ]; then
-          echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
-          MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
+        if [ -n "$MOBB_PROJECT_NAME" ]; then
+          echo "mobb-project-name specified: $MOBB_PROJECT_NAME"
+          MOBB_ARGS+=(--mobb-project-name "$MOBB_PROJECT_NAME")
         fi
 
         # Check if organization-id exists and append it
-        if [ -n "${{ inputs.organization-id }}" ]; then
-          echo "organization-id specified: ${{ inputs.organization-id }}"
-          MobbExecString+=" --organization-id \"${{ inputs.organization-id }}\""
+        if [ -n "$MOBB_ORG_ID" ]; then
+          echo "organization-id specified: $MOBB_ORG_ID"
+          MOBB_ARGS+=(--organization-id "$MOBB_ORG_ID")
         fi
 
         # Check if auto-pr flag is set append it
-        if [ "${{ inputs.auto-pr }}" == "true" ]; then
+        if [ "$AUTO_PR" == "true" ]; then
           echo "Auto-PR flag is set"
-          MobbExecString+=" --auto-pr"
+          MOBB_ARGS+=(--auto-pr)
         fi
 
         # Check if commit-directly flag is set append it to the Mobb CLI command
-        if [ "${{ inputs.commit-directly }}" == "true" ]; then
+        if [ "$COMMIT_DIRECTLY" == "true" ]; then
           echo "Commit Directly flag is set"
-          MobbExecString+=" --commit-directly"
+          MOBB_ARGS+=(--commit-directly)
 
           # Check if the action is running in the context of a pull request
-          if [ -n "${{ github.event.pull_request.number }}" ]; then
-            PR_ID="${{ github.event.pull_request.number }}"
+          PR_ID="${{ github.event.pull_request.number }}"
+          if [ -n "$PR_ID" ]; then
             echo "Pull Request ID detected: $PR_ID"
-            MobbExecString+=" --pr-id $PR_ID"
+            MOBB_ARGS+=(--pr-id "$PR_ID")
           else
             echo "No Pull Request detected. Skipping --pr-id flag."
           fi
         fi
 
-        # Output the final command string for debugging and execute it
-        echo "Mobb Command: $MobbExecString"
-        OUT=$(eval $MobbExecString)
-        
+        OUT=$("${MOBB_ARGS[@]}")
+
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
-        OUT=$(echo $OUT | tr '\n' ' ')
-        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        OUT=$(echo "$OUT" | tr '\n' ' ')
+        echo "fix-report-url=$OUT" >> "$GITHUB_OUTPUT"
         echo "Mobb URL: $OUT"
-        
-      shell: bash -l {0}
-    - uses: Sibz/github-status-action@v1
+
+      shell: bash
+      env:
+        MOBB_API_KEY: ${{ inputs.api-key }}
+        REPORT_FILE: ${{ inputs.report-file }}
+        MOBB_PROJECT_NAME: ${{ inputs.mobb-project-name }}
+        MOBB_ORG_ID: ${{ inputs.organization-id }}
+        AUTO_PR: ${{ inputs.auto-pr }}
+        COMMIT_DIRECTLY: ${{ inputs.commit-directly }}
+    - uses: Sibz/github-status-action@33dcef57b1a833b6a2e50679cd8dece3193c0f03 # v1
       with:
         authToken: ${{ inputs.github-token }}
         context: "Mobb fix report link"
