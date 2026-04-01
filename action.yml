@@ -33,9 +33,9 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v3.6.0
+    - uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 20
     - id: run-npx-mobb-dev
       run: |
         REPO=$(git remote get-url origin)
@@ -86,11 +86,13 @@ runs:
           exit $RETVAL
         fi
         OUT=$(echo $OUT | tr '\n' ' ')
+        OUT=$(echo "$OUT" | grep -oP 'https://\S+' | head -1)
         echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
         echo "Mobb URL: $OUT"
         
       shell: bash -l {0}
     - uses: Sibz/github-status-action@v1
+      if: ${{ startsWith(steps.run-npx-mobb-dev.outputs.fix-report-url, 'https://') }}
       with:
         authToken: ${{ inputs.github-token }}
         context: "Mobb fix report link"

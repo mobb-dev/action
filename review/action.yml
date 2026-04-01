@@ -47,9 +47,9 @@ runs:
         name: vul-report
         path: results
 
-    - uses: actions/setup-node@v3.6.0
+    - uses: actions/setup-node@v4
       with:
-        node-version: 18
+        node-version: 20
 
     - id: run-npx-mobb-dev
       run: |
