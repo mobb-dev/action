@@ -77,9 +77,10 @@ runs:
 
         OUT=$("${MOBB_ARGS[@]}" || true)
         OUT=$(echo "$OUT" | tr '\n' ' ')
+        MOBB_URL=$(echo "$OUT" | grep -oE 'https://[^ ]+' | head -1)
 
-        echo "fix-report-url=$OUT" >> "$GITHUB_OUTPUT"
-        echo "Mobb URL: $OUT"
+        echo "fix-report-url=$MOBB_URL" >> "$GITHUB_OUTPUT"
+        echo "Mobb URL: $MOBB_URL"
 
       shell: bash
       env:
