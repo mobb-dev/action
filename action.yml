@@ -42,6 +42,9 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
+        echo "REPO: $REPO"
+        echo "BRANCH: $BRANCH"
+
         MOBB_ARGS=(
           npx --yes mobbdev@latest analyze --ci
           -r "$REPO"
