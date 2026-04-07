@@ -57,6 +57,11 @@ runs:
         VUL_FILE_PATH="results/$(basename "$REPORT_FILE")"
         PR_NUMBER="${{ github.event.pull_request.number }}"
 
+        echo "REPO: $REPO"
+        echo "BRANCH: $GITHUB_HEAD_REF"
+        echo "COMMIT_HASH: $COMMIT_HASH"
+        echo "PR_NUMBER: $PR_NUMBER"
+
         MOBB_ARGS=(
           npx --yes mobbdev@latest review
           -r "$REPO"
