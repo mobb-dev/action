@@ -77,7 +77,7 @@ runs:
           MOBB_ARGS+=(--commit-directly)
 
           # Check if the action is running in the context of a pull request
-          PR_ID="${{ github.event.pull_request.number }}"
+          PR_ID="$PR_NUMBER_ENV"
           if [ -n "$PR_ID" ]; then
             echo "Pull Request ID detected: $PR_ID"
             MOBB_ARGS+=(--pr-id "$PR_ID")
@@ -105,6 +105,7 @@ runs:
         MOBB_ORG_ID: ${{ inputs.organization-id }}
         AUTO_PR: ${{ inputs.auto-pr }}
         COMMIT_DIRECTLY: ${{ inputs.commit-directly }}
+        PR_NUMBER_ENV: ${{ github.event.pull_request.number }}
     - uses: Sibz/github-status-action@33dcef57b1a833b6a2e50679cd8dece3193c0f03 # v1
       with:
         authToken: ${{ inputs.github-token }}

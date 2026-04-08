@@ -55,7 +55,7 @@ runs:
         REPO=${REPO%".git"}
         COMMIT_HASH=$(git rev-parse "$GITHUB_HEAD_REF")
         VUL_FILE_PATH="results/$(basename "$REPORT_FILE")"
-        PR_NUMBER="${{ github.event.pull_request.number }}"
+        PR_NUMBER="$PR_NUMBER_ENV"
 
         echo "REPO: $REPO"
         echo "BRANCH: $GITHUB_HEAD_REF"
@@ -94,6 +94,7 @@ runs:
         SCANNER: ${{ inputs.scanner }}
         REPORT_FILE: ${{ inputs.report-file }}
         MOBB_PROJECT_NAME: ${{ inputs.mobb-project-name }}
+        PR_NUMBER_ENV: ${{ github.event.pull_request.number }}
 
     - uses: Sibz/github-status-action@33dcef57b1a833b6a2e50679cd8dece3193c0f03 # v1
       if: ${{ startsWith(steps.run-npx-mobb-dev.outputs.fix-report-url, 'https://') }}
