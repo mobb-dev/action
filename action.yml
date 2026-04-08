@@ -86,7 +86,7 @@ runs:
           fi
         fi
 
-        OUT=$("${MOBB_ARGS[@]}")
+        OUT=$(env "${MOBB_ARGS[@]}")
 
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
