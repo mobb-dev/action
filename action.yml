@@ -33,7 +33,7 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+    - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
     - id: run-npx-mobb-dev
@@ -42,71 +42,55 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-        echo "REPO: $REPO"
-        echo "BRANCH: $BRANCH"
-
-        MOBB_ARGS=(
-          npx --yes mobbdev@latest analyze --ci
-          -r "$REPO"
-          --ref "$BRANCH"
-          --api-key "$MOBB_API_KEY"
-          -f "$REPORT_FILE"
-        )
-
+        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}"
+        
         # Check if mobb-project-name exists and append it
-        if [ -n "$MOBB_PROJECT_NAME" ]; then
-          echo "mobb-project-name specified: $MOBB_PROJECT_NAME"
-          MOBB_ARGS+=(--mobb-project-name "$MOBB_PROJECT_NAME")
+        if [ -n "${{ inputs.mobb-project-name }}" ]; then
+          echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
+          MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
         fi
 
         # Check if organization-id exists and append it
-        if [ -n "$MOBB_ORG_ID" ]; then
-          echo "organization-id specified: $MOBB_ORG_ID"
-          MOBB_ARGS+=(--organization-id "$MOBB_ORG_ID")
+        if [ -n "${{ inputs.organization-id }}" ]; then
+          echo "organization-id specified: ${{ inputs.organization-id }}"
+          MobbExecString+=" --organization-id \"${{ inputs.organization-id }}\""
         fi
 
         # Check if auto-pr flag is set append it
-        if [ "$AUTO_PR" == "true" ]; then
+        if [ "${{ inputs.auto-pr }}" == "true" ]; then
           echo "Auto-PR flag is set"
-          MOBB_ARGS+=(--auto-pr)
+          MobbExecString+=" --auto-pr"
         fi
 
         # Check if commit-directly flag is set append it to the Mobb CLI command
-        if [ "$COMMIT_DIRECTLY" == "true" ]; then
+        if [ "${{ inputs.commit-directly }}" == "true" ]; then
           echo "Commit Directly flag is set"
-          MOBB_ARGS+=(--commit-directly)
+          MobbExecString+=" --commit-directly"
 
           # Check if the action is running in the context of a pull request
-          PR_ID="$PR_NUMBER_ENV"
-          if [ -n "$PR_ID" ]; then
+          if [ -n "${{ github.event.pull_request.number }}" ]; then
+            PR_ID="${{ github.event.pull_request.number }}"
             echo "Pull Request ID detected: $PR_ID"
-            MOBB_ARGS+=(--pr-id "$PR_ID")
+            MobbExecString+=" --pr-id $PR_ID"
           else
             echo "No Pull Request detected. Skipping --pr-id flag."
           fi
         fi
 
-        OUT=$("${MOBB_ARGS[@]}")
-
+        # Output the final command string for debugging and execute it
+        echo "Mobb Command: $MobbExecString"
+        OUT=$(eval $MobbExecString)
+        
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
           exit $RETVAL
         fi
-        OUT=$(echo "$OUT" | tr '\n' ' ')
-        MOBB_URL=$(echo "$OUT" | grep -oE 'https://[^ ]+' | head -1)
-        echo "fix-report-url=$MOBB_URL" >> "$GITHUB_OUTPUT"
-        echo "Mobb URL: $MOBB_URL"
-
-      shell: bash
-      env:
-        MOBB_API_KEY: ${{ inputs.api-key }}
-        REPORT_FILE: ${{ inputs.report-file }}
-        MOBB_PROJECT_NAME: ${{ inputs.mobb-project-name }}
-        MOBB_ORG_ID: ${{ inputs.organization-id }}
-        AUTO_PR: ${{ inputs.auto-pr }}
-        COMMIT_DIRECTLY: ${{ inputs.commit-directly }}
-        PR_NUMBER_ENV: ${{ github.event.pull_request.number }}
-    - uses: Sibz/github-status-action@33dcef57b1a833b6a2e50679cd8dece3193c0f03 # v1
+        OUT=$(echo $OUT | tr '\n' ' ')
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        echo "Mobb URL: $OUT"
+        
+      shell: bash -l {0}
+    - uses: Sibz/github-status-action@v1
       with:
         authToken: ${{ inputs.github-token }}
         context: "Mobb fix report link"

@@ -27,25 +27,27 @@ runs:
   using: "composite"
   steps:
     # save report since the checkout step deletes it
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+    - uses: actions/upload-artifact@v4
       id: vul-report-upload
       with:
         name: vul-report
         path: ${{ inputs.report-file }}
+        run: echo "Artifact ID is ${{ steps.vul-report-upload.outputs.artifact-id }}"
+        shell: bash -l {0}
 
     # needed since we get wrong hash. this step deletes the report file, so need to save it beforehand
-    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+    - uses: actions/checkout@v3
       name: checkout-to-branch
       with:
         ref: ${{ github.head_ref }}
 
     # restore the report file
-    - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+    - uses: actions/download-artifact@v4
       with:
         name: vul-report
         path: results
 
-    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+    - uses: actions/setup-node@v3.6.0
       with:
         node-version: 18
 
@@ -53,50 +55,30 @@ runs:
       run: |
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
-        COMMIT_HASH=$(git rev-parse "$GITHUB_HEAD_REF")
-        VUL_FILE_PATH="results/$(basename "$REPORT_FILE")"
-        PR_NUMBER="$PR_NUMBER_ENV"
-
-        echo "REPO: $REPO"
-        echo "BRANCH: $GITHUB_HEAD_REF"
-        echo "COMMIT_HASH: $COMMIT_HASH"
-        echo "PR_NUMBER: $PR_NUMBER"
-
-        MOBB_ARGS=(
-          npx --yes mobbdev@latest review
-          -r "$REPO"
-          --ref "$GITHUB_HEAD_REF"
-          --ch "$COMMIT_HASH"
-          --api-key "$MOBB_API_KEY"
-          -f "$VUL_FILE_PATH"
-          --pr "$PR_NUMBER"
-          --github-token "$GH_TOKEN"
-          --scanner "$SCANNER"
-        )
+        GITHUB_TOKEN=${{ inputs.github-token }}
+        SCANNER=${{ inputs.scanner }}
+        COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
+        PR_NUMBER=${{ github.event.pull_request.number }}
+        VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
+        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
 
         # Check if mobb-project-name exists and append it
-        if [ -n "$MOBB_PROJECT_NAME" ]; then
-          echo "mobb-project-name specified: $MOBB_PROJECT_NAME"
-          MOBB_ARGS+=(--mobb-project-name "$MOBB_PROJECT_NAME")
+        if [ -n "${{ inputs.mobb-project-name }}" ]; then
+          echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
+          MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
         fi
 
-        OUT=$("${MOBB_ARGS[@]}" || true)
-        OUT=$(echo "$OUT" | tr '\n' ' ')
-        MOBB_URL=$(echo "$OUT" | grep -oE 'https://[^ ]+' | head -1)
+        # Output the final command string for debugging
+        echo "Mobb Command: $MobbExecString"
+        OUT=$(eval $MobbExecString || true)
+        OUT=$(echo $OUT | tr '\n' ' ')
 
-        echo "fix-report-url=$MOBB_URL" >> "$GITHUB_OUTPUT"
-        echo "Mobb URL: $MOBB_URL"
+        echo "fix-report-url=$OUT" >> $GITHUB_OUTPUT
+        echo "Mobb URL: $OUT"
 
-      shell: bash
-      env:
-        MOBB_API_KEY: ${{ inputs.api-key }}
-        GH_TOKEN: ${{ inputs.github-token }}
-        SCANNER: ${{ inputs.scanner }}
-        REPORT_FILE: ${{ inputs.report-file }}
-        MOBB_PROJECT_NAME: ${{ inputs.mobb-project-name }}
-        PR_NUMBER_ENV: ${{ github.event.pull_request.number }}
+      shell: bash -l {0}
 
-    - uses: Sibz/github-status-action@33dcef57b1a833b6a2e50679cd8dece3193c0f03 # v1
+    - uses: Sibz/github-status-action@v1
       if: ${{ startsWith(steps.run-npx-mobb-dev.outputs.fix-report-url, 'https://') }}
       with:
         authToken: ${{ inputs.github-token }}
