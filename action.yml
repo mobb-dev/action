@@ -45,8 +45,11 @@ runs:
         echo "REPO: $REPO"
         echo "BRANCH: $BRANCH"
 
+        # npx --yes mobbdev@latest is kept on its own line so test tooling
+        # (autofixer CI) can sed-replace it with a local build command.
+        MOBB_EXEC=(npx --yes mobbdev@latest)
         MOBB_ARGS=(
-          npx --yes mobbdev@latest analyze --ci
+          analyze --ci
           -r "$REPO"
           --ref "$BRANCH"
           --api-key "$MOBB_API_KEY"
@@ -86,7 +89,7 @@ runs:
           fi
         fi
 
-        OUT=$(env "${MOBB_ARGS[@]}")
+        OUT=$(env "${MOBB_EXEC[@]}" "${MOBB_ARGS[@]}")
 
         RETVAL=$?
         if [ $RETVAL -ne 0 ]; then
