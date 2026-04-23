@@ -6,6 +6,7 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 ## `report-file`
 
+
 **Required** The full path of the SAST report file.
 
 ## `api-key`
