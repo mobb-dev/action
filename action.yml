@@ -35,7 +35,7 @@ runs:
   steps:
     - uses: actions/setup-node@v3.6.0
       with:
-        node-version: 18
+        node-version: 20
     - id: run-npx-mobb-dev
       run: |
         REPO=$(git remote get-url origin)
