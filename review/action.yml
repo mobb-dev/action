@@ -26,40 +26,18 @@ outputs:
 runs:
   using: "composite"
   steps:
-    # save report since the checkout step deletes it
-    - uses: actions/upload-artifact@v4
-      id: vul-report-upload
-      with:
-        name: vul-report
-        path: ${{ inputs.report-file }}
-        run: echo "Artifact ID is ${{ steps.vul-report-upload.outputs.artifact-id }}"
-        shell: bash -l {0}
-
-    # needed since we get wrong hash. this step deletes the report file, so need to save it beforehand
-    - uses: actions/checkout@v3
-      name: checkout-to-branch
-      with:
-        ref: ${{ github.head_ref }}
-
-    # restore the report file
-    - uses: actions/download-artifact@v4
-      with:
-        name: vul-report
-        path: results
-
     - uses: actions/setup-node@v3.6.0
       with:
-        node-version: 18
+        node-version: 20
 
     - id: run-npx-mobb-dev
       run: |
-        REPO=$(git remote get-url origin)
-        REPO=${REPO%".git"}
+        REPO="${{ github.server_url }}/${{ github.repository }}"
         GITHUB_TOKEN=${{ inputs.github-token }}
         SCANNER=${{ inputs.scanner }}
-        COMMIT_HASH=$(git rev-parse $GITHUB_HEAD_REF) 
+        COMMIT_HASH="${{ github.event.pull_request.head.sha }}"
         PR_NUMBER=${{ github.event.pull_request.number }}
-        VUL_FILE_PATH=results/$(basename ${{ inputs.report-file }})
+        VUL_FILE_PATH="${{ inputs.report-file }}"
         MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
 
         # Check if mobb-project-name exists and append it
