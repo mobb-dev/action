@@ -52,7 +52,7 @@ The Mobb fix report URL.
 
 ### Fix-only mode with an existing SAST report (Checkmarx)
 
-```
+```yaml
 # This example utilizes Mobb with Checkmarx via GitHub Actions
 
 on: [pull_request]
