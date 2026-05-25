@@ -50,43 +50,6 @@ The Mobb fix report URL.
 
 ## Example usage
 
-### Scan-and-fix mode with diff-aware scanning (no external SAST tool required)
-
-```yaml
-# Mobb runs its own SAST scan on the PR diff and opens fix PRs automatically.
-
-name: Mobb Scan-and-Fix
-
-on:
-  pull_request:
-    branches:
-      - main
-
-jobs:
-  scan-and-fix:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      statuses: write
-      contents: read
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Mobb scan-and-fix
-        uses: mobb-dev/action@v1
-        with:
-          # report-file intentionally omitted -> enables scan-and-fix mode
-          api-key: ${{ secrets.MOBB_API_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          diff-aware: true
-          auto-pr: true
-```
-
-> Note: `diff-aware: true` requires a `pull_request` (or `pull_request_target`) trigger so the action can read `github.event.pull_request.base.sha`. On other event types the flag is silently ignored and Mobb falls back to a full scan.
-
 ### Fix-only mode with an existing SAST report (Checkmarx)
 
 ```
@@ -130,3 +93,40 @@ jobs:
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+### Scan-and-fix mode with diff-aware scanning (no external SAST tool required)
+
+```yaml
+# Mobb runs its own SAST scan on the PR diff and opens fix PRs automatically.
+
+name: Mobb Scan-and-Fix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  scan-and-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Mobb scan-and-fix
+        uses: mobb-dev/action@v1
+        with:
+          # report-file intentionally omitted -> enables scan-and-fix mode
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          diff-aware: true
+          auto-pr: true
+          auto-commit: true
+```
+
+> Note: `diff-aware: true` requires a `pull_request` (or `pull_request_target`) trigger so the action can read `github.event.pull_request.base.sha`. On other event types the flag is silently ignored and Mobb falls back to a full scan.
