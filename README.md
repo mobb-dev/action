@@ -2,11 +2,16 @@
 
 This action posts the code and a SAST report to the Mobb vulnerability analysis engine and links the URL of the fix report to the PR. If you are using this on a private repo then the Mobb user the API key belongs to must have access to the repo and must approve github access for the user on the Mobb platform beforehand.
 
+The action supports two modes:
+
+- **Fix-only mode (default)**: provide an existing SAST report via `report-file` and Mobb generates fixes for the findings.
+- **Scan-and-fix mode**: omit `report-file` and the Mobb CLI runs its own SAST scan (powered by opengrep) before producing fixes. Combine with `diff-aware: true` on pull requests to limit the scan to changes since the PR base commit.
+
 ## Inputs
 
 ## `report-file`
 
-**Required** The full path of the SAST report file.
+**Optional** The full path of the SAST report file. Omitting this input switches the action into **scan-and-fix mode**: the Mobb CLI performs its own internal SAST scan (via opengrep) instead of consuming an external report.
 
 ## `api-key`
 
@@ -32,6 +37,10 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 **Optional** The Organization ID to use with the Mobb platform. If not specified, the default organization will be used.
 
+## `diff-aware`
+
+**Optional** `true` or `false` (default `false`). Part of Mobb's scan-and-fix mode (enabled by omitting `report-file`). When set to `true` and the workflow is triggered by a `pull_request` event, Mobb performs a diff-aware scan limited to changes since the PR base SHA (passed to the CLI as `--baseline-commit`). Has no effect outside a pull request context.
+
 
 ## Outputs
 
@@ -41,7 +50,9 @@ The Mobb fix report URL.
 
 ## Example usage
 
-```
+### Fix-only mode with an existing SAST report (Checkmarx)
+
+```yaml
 # This example utilizes Mobb with Checkmarx via GitHub Actions
 
 on: [pull_request]
@@ -82,3 +93,40 @@ jobs:
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+### Scan-and-fix mode with diff-aware scanning (no external SAST tool required)
+
+```yaml
+# Mobb runs its own SAST scan on the PR diff and opens fix PRs automatically.
+
+name: Mobb Scan-and-Fix
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  scan-and-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      statuses: write
+      contents: read
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Mobb scan-and-fix
+        uses: mobb-dev/action@v1
+        with:
+          # report-file intentionally omitted -> enables scan-and-fix mode
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          diff-aware: true
+          auto-pr: true
+          auto-commit: true
+```
+
+> Note: `diff-aware: true` requires a `pull_request` (or `pull_request_target`) trigger so the action can read `github.event.pull_request.base.sha`. On other event types the flag is silently ignored and Mobb falls back to a full scan.

@@ -5,8 +5,8 @@ branding:
   color: blue
 inputs:
   report-file:
-    description: "Path to SAST report file"
-    required: true
+    description: "Path to SAST report file. Omitting this input enables Mobb's scan-and-fix mode: the Mobb CLI performs its own internal SAST scan (via opengrep) instead of consuming an external report."
+    required: false
   api-key:
     description: "Mobb API key"
     required: true
@@ -25,6 +25,10 @@ inputs:
   organization-id:
     description: "Organization ID"
     required: false
+  diff-aware:
+    description: "Part of Mobb's scan-and-fix mode (enabled by omitting report-file). When true and the workflow is triggered by a pull_request event, Mobb performs a diff-aware scan limited to changes since the PR base SHA (passed as --baseline-commit). Has no effect outside PR context. Defaults to false."
+    required: false
+    default: "false"
 
 outputs:
   fix-report-url:
@@ -42,8 +46,16 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }} -f ${{ inputs.report-file }}"
-        
+        MobbExecString="npx --yes mobbdev@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }}"
+
+        # Append -f only if a report file was provided. When omitted, Mobb runs in scan-and-fix mode (internal opengrep scan).
+        if [ -n "${{ inputs.report-file }}" ]; then
+          echo "report-file specified: ${{ inputs.report-file }}"
+          MobbExecString+=" -f ${{ inputs.report-file }}"
+        else
+          echo "No report-file provided. Running in scan-and-fix mode (Mobb CLI will perform internal SAST scan)."
+        fi
+
         # Check if mobb-project-name exists and append it
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
           echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
@@ -74,6 +86,17 @@ runs:
             MobbExecString+=" --pr-id $PR_ID"
           else
             echo "No Pull Request detected. Skipping --pr-id flag."
+          fi
+        fi
+
+        # When diff-aware scan-and-fix is enabled and we are in a PR context, point --baseline-commit at the PR base SHA.
+        if [ "${{ inputs.diff-aware }}" == "true" ]; then
+          BASELINE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -n "$BASELINE_SHA" ]; then
+            echo "diff-aware enabled, using baseline commit: $BASELINE_SHA"
+            MobbExecString+=" --baseline-commit $BASELINE_SHA"
+          else
+            echo "diff-aware enabled but no pull_request context detected; skipping --baseline-commit."
           fi
         fi
 
