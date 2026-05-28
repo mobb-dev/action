@@ -5,8 +5,8 @@ branding:
   color: blue
 inputs:
   report-file:
-    description: "Path to SAST report file"
-    required: true
+    description: "Path to SAST report file. Omitting this input enables Mobb's scan-and-fix mode: the Mobb CLI performs its own internal SAST scan (via opengrep) instead of consuming an external report."
+    required: false
   api-key:
     description: "Mobb API key"
     required: true
@@ -38,7 +38,15 @@ runs:
         COMMIT_HASH="${{ github.event.pull_request.head.sha }}"
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH="${{ inputs.report-file }}"
-        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} -f $VUL_FILE_PATH  --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
+        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
+
+        # Append -f only if a report file was provided. When omitted, Mobb runs in scan-and-fix mode (internal opengrep scan).
+        if [ -n "$VUL_FILE_PATH" ]; then
+          echo "report-file specified: $VUL_FILE_PATH"
+          MobbExecString+=" -f $VUL_FILE_PATH"
+        else
+          echo "No report-file provided. Running in scan-and-fix mode (Mobb CLI will perform internal SAST scan)."
+        fi
 
         # Check if mobb-project-name exists and append it
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
