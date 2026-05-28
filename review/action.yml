@@ -14,8 +14,8 @@ inputs:
     description: "GitaHub Token"
     required: true
   scanner:
-    description: "SAST scanner(codeql, snyk, checkmarx, fortify)"
-    required: true
+    description: "SAST scanner (codeql, snyk, checkmarx, fortify). Required when report-file is provided; can be omitted in scan-and-fix mode (no report-file)."
+    required: false
   mobb-project-name:
     description: "Mobb Project Name"
     required: false
@@ -38,7 +38,7 @@ runs:
         COMMIT_HASH="${{ github.event.pull_request.head.sha }}"
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH="${{ inputs.report-file }}"
-        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} --pr $PR_NUMBER --github-token ${{ inputs.github-token }} --scanner $SCANNER"
+        MobbExecString="npx --yes mobbdev@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} --pr $PR_NUMBER --github-token ${{ inputs.github-token }}"
 
         # Append -f only if a report file was provided. When omitted, Mobb runs in scan-and-fix mode (internal opengrep scan).
         if [ -n "$VUL_FILE_PATH" ]; then
@@ -46,6 +46,14 @@ runs:
           MobbExecString+=" -f $VUL_FILE_PATH"
         else
           echo "No report-file provided. Running in scan-and-fix mode (Mobb CLI will perform internal SAST scan)."
+        fi
+
+        # Append --scanner only if provided. Required when feeding an external report; not needed in scan-and-fix mode.
+        if [ -n "$SCANNER" ]; then
+          echo "scanner specified: $SCANNER"
+          MobbExecString+=" --scanner $SCANNER"
+        else
+          echo "No scanner provided."
         fi
 
         # Check if mobb-project-name exists and append it
