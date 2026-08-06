@@ -68,10 +68,20 @@ runs:
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
 
-        # create-one-pr is only meaningful alongside --auto-pr; fail here rather
-        # than letting the CLI reject it after setup work has already run.
+        # Validate input combinations the Mobb CLI rejects, so the failure is a
+        # readable error here rather than a CLI error after setup work has run.
+        #
+        # create-one-pr is only meaningful alongside --auto-pr.
         if [ "${{ inputs.create-one-pr }}" == "true" ] && [ "${{ inputs.auto-pr }}" != "true" ]; then
           echo "::error::create-one-pr requires auto-pr to be set to true."
+          exit 1
+        fi
+
+        # The CLI rejects --create-one-pr together with --commit-directly:
+        # "--create-one-pr and --commit-directly cannot be provided at the same
+        # time". One opens a single PR, the other bypasses PRs entirely.
+        if [ "${{ inputs.create-one-pr }}" == "true" ] && [ "${{ inputs.commit-directly }}" == "true" ]; then
+          echo "::error::create-one-pr and commit-directly are mutually exclusive: create-one-pr opens a single pull request for all fixes, while commit-directly bypasses pull requests and commits to the branch. Set only one."
           exit 1
         fi
 

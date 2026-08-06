@@ -82,14 +82,16 @@ jobs:
       - name: assert auto-pr command
         env:
           CMD: ${{ steps.auto-pr.outputs.mobb-command }}
-          IS_PR: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "$CMD"
           grep -q -- '--auto-pr' <<<"$CMD" || { echo "::error::missing --auto-pr"; exit 1; }
           grep -q -- '--create-one-pr' <<<"$CMD" || { echo "::error::missing --create-one-pr"; exit 1; }
-          # --pr-id should accompany --auto-pr whenever there is a PR context.
-          if [ "$IS_PR" == "true" ]; then
-            grep -q -- '--pr-id' <<<"$CMD" || { echo "::error::missing --pr-id in a pull_request context"; exit 1; }
+          # The CLI requires --pr-id to be accompanied by --commit-directly
+          # ("--pull-request flag requires --commit-directly to be provided as
+          # well"), so it must not appear on a plain --auto-pr run.
+          if grep -q -- '--pr-id' <<<"$CMD"; then
+            echo "::error::--pr-id was passed without --commit-directly; the CLI rejects that combination"
+            exit 1
           fi
           echo "ok"
 
@@ -170,6 +172,30 @@ jobs:
         run: |
           if [ "$OUTCOME" != "failure" ]; then
             echo "::error::create-one-pr without auto-pr should fail the action, but the step outcome was '$OUTCOME'"
+            exit 1
+          fi
+          echo "ok: rejected as expected"
+
+      # --- negative: create-one-pr together with commit-directly ------------
+      # The CLI rejects this combination outright ("--create-one-pr and
+      # --commit-directly cannot be provided at the same time"), so the action
+      # must catch it first.
+      - id: mutually-exclusive
+        continue-on-error: true
+        uses: ./
+        with:
+          api-key: dummy-api-key
+          github-token: ${{ github.token }}
+          auto-pr: "true"
+          create-one-pr: "true"
+          commit-directly: "true"
+
+      - name: assert create-one-pr + commit-directly is rejected
+        env:
+          OUTCOME: ${{ steps.mutually-exclusive.outcome }}
+        run: |
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "::error::create-one-pr together with commit-directly should fail the action, but the step outcome was '$OUTCOME'"
             exit 1
           fi
           echo "ok: rejected as expected"

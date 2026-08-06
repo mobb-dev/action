@@ -107,6 +107,36 @@ jobs:
           fi
           echo "ok: -f is still optional"
 
+      # The two checks below track CLI constraints that action.yml's input
+      # validation mirrors. They emit notices rather than failing: if the CLI
+      # relaxes a constraint, nothing breaks, but the action's guard becomes
+      # unnecessarily strict and should be revisited.
+      - name: analyze still couples --pr-id to --commit-directly
+        run: |
+          set +e
+          out=$(npx --yes "$CLI" analyze --ci -r https://github.com/mobb-dev/action \
+                  --api-key FAKE --auto-pr --pr-id 1 2>&1)
+          set -e
+          echo "$out"
+          if grep -q 'requires --commit-directly' <<<"$out"; then
+            echo "ok: --pr-id still requires --commit-directly, which is why action.yml only passes --pr-id alongside commit-directly"
+          else
+            echo "::notice::the CLI no longer couples --pr-id to --commit-directly; action.yml could pass --pr-id on plain --auto-pr runs too"
+          fi
+
+      - name: analyze still rejects --create-one-pr with --commit-directly
+        run: |
+          set +e
+          out=$(npx --yes "$CLI" analyze --ci -r https://github.com/mobb-dev/action \
+                  --api-key FAKE --auto-pr --create-one-pr --commit-directly 2>&1)
+          set -e
+          echo "$out"
+          if grep -q 'cannot be provided at the same time' <<<"$out"; then
+            echo "ok: still mutually exclusive, matching action.yml's guard"
+          else
+            echo "::notice::the CLI no longer rejects --create-one-pr with --commit-directly; action.yml's mutual-exclusion guard could be dropped"
+          fi
+
   review-contract:
     # Separate job on purpose: review mode breaking must show up as its own red
     # check rather than being buried in an analyze failure.

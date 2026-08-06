@@ -43,7 +43,7 @@ The actions invoke the Mobb CLI (Bugsy) as [`@mobb.ai/cli`](https://www.npmjs.co
 
 ## `create-one-pr`
 
-**Optional** `true` or `false` (default `false`). Opens a single unified pull request containing all fixes instead of one pull request per fix. Requires `auto-pr` to be set to `true`; the action fails fast if it is not.
+**Optional** `true` or `false` (default `false`). Opens a single unified pull request containing all fixes instead of one pull request per fix. Requires `auto-pr` to be set to `true`, and **cannot be combined with `commit-directly`** — one opens a pull request, the other bypasses pull requests entirely. The action fails fast on either mistake.
 
 ## `organization-id`
 
