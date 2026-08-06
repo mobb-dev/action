@@ -13,7 +13,23 @@ This repo contains two actions:
 
 The actions invoke the Mobb CLI (Bugsy) as [`@mobb.ai/cli`](https://www.npmjs.com/package/@mobb.ai/cli), which ships as a prebuilt standalone binary, so the CLI itself no longer depends on the Node version on your runner. `npx` still needs some Node present; the actions install Node 20 for you.
 
-> **Alpine / musl and `--no-optional` runners:** `@mobb.ai/cli` selects its binary through npm `optionalDependencies` rather than downloading one at runtime. On musl-based images (Alpine), on `win-arm64`, or wherever optional dependencies are skipped (`npm --no-optional`, or `omit=optional` in an `.npmrc`), no binary resolves and the CLI exits with an error. On those runners use the Node-based package instead — `npx mobbdev@latest` — which is the same Bugsy from the same version stream.
+### Runner platform support
+
+`@mobb.ai/cli` selects a prebuilt binary through npm `optionalDependencies` rather than downloading one at runtime, so it only works where a matching binary is published. Published platforms are `linux-x64`, `linux-arm64`, `macos-x64`, `macos-arm64` and `win-x64`.
+
+| Runner | Works | Notes |
+|---|---|---|
+| GitHub-hosted `ubuntu-*`, `macos-*`, `windows-*` (x64/arm64 Linux and macOS) | Yes | What this action is tested on |
+| glibc Linux older than 2.28 (RHEL/CentOS 7, Ubuntu 18.04) | No | The binaries are dynamically linked and require glibc ≥ 2.28, i.e. Debian 10+, Ubuntu 20.04+, RHEL 8+ |
+| Alpine / musl containers | No | See below |
+| `win-arm64` | No | No binary is published for this platform |
+| Any runner installing with `--no-optional` or `omit=optional` | No | The platform package is skipped, so no binary is present |
+
+**On unsupported runners, use the Node-based package instead — `npx mobbdev@latest`.** It is the same Bugsy from the same version stream, needs Node ≥ 18.20, and works anywhere Node runs, including Alpine.
+
+> **The failure mode is misleading.** On Alpine, npm still installs the glibc `linux-x64` package (the platform packages carry no npm `libc` constraint), so the failure surfaces at spawn time as `spawnSync .../mobbdev ENOENT`. On glibc older than 2.28 you get `mobbdev: not found`. In both cases the file is present — it is the ELF interpreter or libc that is missing, not the binary. If you see either error, switch to `npx mobbdev@latest`.
+>
+> Note that a job running in an Alpine container cannot use this action anyway: it depends on `actions/setup-node`, which installs official nodejs.org builds and has no musl variant. Alpine users should invoke `npx mobbdev@latest` directly rather than through this action.
 
 ## Inputs
 

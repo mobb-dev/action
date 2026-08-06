@@ -74,6 +74,43 @@ jobs:
       - name: CLI launches
         run: npx --yes "$CLI" --help
 
+  musl-fallback:
+    # The README tells users on Alpine/musl runners to fall back to the
+    # Node-based `mobbdev` package, because @mobb.ai/cli's binaries are
+    # dynamically linked against glibc (they need glibc >= 2.28) and npm has no
+    # libc constraint to stop it installing the glibc build on musl. This job
+    # guards that escape hatch so it cannot rot.
+    #
+    # It also reports if @mobb.ai/cli ever starts working on musl, which would
+    # mean the README caveat can be dropped.
+    name: musl fallback (Alpine)
+    runs-on: ubuntu-latest
+    container: node:20-alpine
+    steps:
+      - name: git is needed by the CLI
+        run: apk add --no-cache git
+
+      - name: the documented mobbdev fallback works on musl
+        run: |
+          npx --yes mobbdev@latest --help > help.txt
+          cat help.txt
+          grep -q 'mobbdev <command>' help.txt \
+            || { echo "::error::the documented Alpine fallback (npx mobbdev@latest) no longer works; the README's musl guidance is wrong"; exit 1; }
+          echo "ok: mobbdev runs on musl"
+
+      - name: report whether @mobb.ai/cli works on musl yet
+        run: |
+          set +e
+          out=$(npx --yes "$CLI" --help 2>&1)
+          rc=$?
+          set -e
+          echo "$out"
+          if [ "$rc" -eq 0 ]; then
+            echo "::notice::@mobb.ai/cli now runs on musl. Publish-side musl support may have landed; the README's Alpine caveat can be revisited."
+          else
+            echo "ok: still glibc-only on musl (exit $rc), matching the documented caveat"
+          fi
+
   analyze-contract:
     # Asserts the flags the root action passes to `analyze` still exist.
     name: analyze flag contract
