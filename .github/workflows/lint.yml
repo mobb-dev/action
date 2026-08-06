@@ -36,6 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # setup-python provides an interpreter we can pip install into. Installing
+      # into the runner's system Python fails on modern Ubuntu with PEP 668
+      # "error: externally-managed-environment".
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install PyYAML
         run: python3 -m pip install --quiet pyyaml
 
