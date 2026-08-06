@@ -1,27 +1,52 @@
-on: [pull_request]
+# Fix-only mode (normal mode) end-to-end test: run a real SAST scan with Snyk and
+# hand the report to the Mobb action via report-file.
+#
+# Needs SNYK_API_KEY and MOBB_API_TOKEN, so it is skipped on fork pull requests.
+# Scan-and-fix and diff-aware are covered by test-analyze-e2e.yml; review mode by
+# test-review-e2e.yml.
+name: Test analyze E2E (fix-only, Snyk)
+
+on: [pull_request, workflow_dispatch]
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   test_job:
+    # Fork PRs have no access to the secrets below, so skip rather than fail red.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     permissions:
       statuses: write
-    name: A test job to test the action
+      contents: read
+    name: Fix Snyk findings with Mobb
     steps:
       # To use this repository's private action,
       # you must check out the repository
       - name: Checkout
-        uses: actions/checkout@v3
-      - uses: actions/setup-node@v3.6.0
+        uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
       - run: |
-          # Run a SAST scan using a supprted tool, Snyk as an example
+          # Run a SAST scan using a supported tool, Snyk as an example
           npx snyk auth ${{ secrets.SNYK_API_KEY }}
           ! npx snyk code test --sarif-file-output=/home/runner/report.json ./
         shell: bash -l {0}
       - name: Mobb action step
+        id: mobb
         uses: ./ # Uses an action in the root directory
         with:
           report-file: "/home/runner/report.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: assert a fix report URL was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          case "$URL" in
+            https://*) echo "ok: $URL" ;;
+            *) echo "::error::no fix report URL was produced (got '$URL')"; exit 1 ;;
+          esac

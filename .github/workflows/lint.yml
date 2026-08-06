@@ -1,0 +1,46 @@
+# Static checks. No secrets, so this runs on fork pull requests too.
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  actionlint:
+    name: actionlint (workflows)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
+          # actionlint only understands workflow files; the composite action.yml
+          # files are checked by the action-metadata job below.
+          #
+          # -shellcheck= disables the shellcheck integration on purpose. It
+          # floods on the deliberate `eval` pattern and the unquoted expression
+          # interpolations in the composite actions; removing those was attempted
+          # in PRs #31/#33 and reverted by #35 for breaking deployments.
+          ./actionlint -shellcheck= -color
+
+  action-metadata:
+    name: composite action metadata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PyYAML
+        run: python3 -m pip install --quiet pyyaml
+
+      # Validates that both action.yml files parse, that every run: block is
+      # valid bash, that every inputs.<name> reference is declared, and that the
+      # README examples only pass real inputs.
+      - name: Validate action.yml files
+        run: python3 .github/scripts/validate-actions.py
