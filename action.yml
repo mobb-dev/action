@@ -119,8 +119,12 @@ runs:
         if [ "${{ inputs.commit-directly }}" == "true" ]; then
           echo "Commit Directly flag is set"
           MobbExecString+=" --commit-directly"
+        fi
 
-          # Check if the action is running in the context of a pull request
+        # --pr-id tells Mobb which pull request the fixes belong to. It is
+        # equally relevant to --auto-pr as it is to --commit-directly, so pass it
+        # whenever either is enabled and we have a pull request context.
+        if [ "${{ inputs.auto-pr }}" == "true" ] || [ "${{ inputs.commit-directly }}" == "true" ]; then
           if [ -n "${{ github.event.pull_request.number }}" ]; then
             PR_ID="${{ github.event.pull_request.number }}"
             echo "Pull Request ID detected: $PR_ID"
