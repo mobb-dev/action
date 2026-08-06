@@ -2,6 +2,10 @@
 # This workflow defines the needed steps to run CodeQL on every pull request and pass the results to Mobb Fixer.
 # This example utilizes CodeQL with JavaScript. For other languages, change the CodeQL language settings below.
 #
+# This file is kept as the reference example users copy. The assertions that make
+# review mode actually testable live in test-review-e2e.yml and
+# test-review-args.yml.
+#
 # Secrets in use:
 # MOBB_API_TOKEN - your mobb user credentials (autumatially set if you forked this repo via the Mobb app)
 # GITHUB_TOKEN - automatically set by GitHub
@@ -15,11 +19,15 @@ on:
 jobs:
   scan-and-fix:
     name: Scan with CodeQL and fix with Mobb
+    # Fork PRs have no access to MOBB_API_TOKEN, so skip rather than fail red.
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: 'ubuntu-latest'
     timeout-minutes: 360
     permissions:
       pull-requests: write
       statuses: write
+      security-events: write
+      contents: read
 
     strategy:
       fail-fast: false
@@ -30,15 +38,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
           output: results
