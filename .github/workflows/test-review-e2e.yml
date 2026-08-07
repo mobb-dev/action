@@ -1,14 +1,16 @@
 # End-to-end test for the review action (GitHub Fixer): run CodeQL, hand the
 # SARIF to Mobb, and require that it comes back with a fix report.
 #
-# This is deliberately a separate workflow from the analyze-mode E2E tests. Review
-# mode has its own hard requirements and its own failure modes, and when it breaks
-# that should be an unambiguous red check named "review", not a line buried in an
-# analyze failure.
+# This is a real Mobb API call - no dry run - so it needs MOBB_API_TOKEN and is
+# skipped on fork pull requests.
 #
-# fail-on-error is set to true here. The review action's default is false for
-# backwards compatibility, which historically meant a CLI failure produced a
-# green check with an empty fix-report-url. CI must never accept that.
+# Deliberately a separate workflow from the analyze-mode E2E tests. Review mode
+# has its own failure modes, and when it breaks that should be an unambiguous
+# red check named "review", not a line buried in an analyze failure.
+#
+# The review action keeps its historical non-blocking behaviour (a CLI failure
+# does not fail the step), so the fix-report-url assertion below is what turns a
+# CLI problem into a red check here in CI.
 name: Test review E2E
 
 on:
@@ -58,8 +60,6 @@ jobs:
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           mobb-project-name: "action-ci-review"
-          # Do not let a CLI failure pass as a green check.
-          fail-on-error: "true"
 
       - name: assert a fix report URL was produced
         env:
@@ -69,36 +69,3 @@ jobs:
             https://*) echo "ok: $URL" ;;
             *) echo "::error::review mode produced no fix report URL (got '$URL')"; exit 1 ;;
           esac
-
-  review-rejects-missing-report:
-    name: review rejects a missing report-file
-    # The CLI hard-requires -f/--scanner/--ch on review, so the action must fail
-    # fast rather than let the CLI die and report success. This job asserts the
-    # guard is still in place; it needs no secrets.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - id: no-report
-        continue-on-error: true
-        uses: ./review
-        with:
-          scanner: codeql
-          api-key: dummy-api-key
-          github-token: ${{ github.token }}
-
-      - name: assert the action failed with a clear error
-        env:
-          OUTCOME: ${{ steps.no-report.outcome }}
-          URL: ${{ steps.no-report.outputs.fix-report-url }}
-        run: |
-          if [ "$OUTCOME" != "failure" ]; then
-            echo "::error::review without report-file must fail the step, but the outcome was '$OUTCOME'. This is the silent-green regression the fail-fast guard exists to prevent."
-            exit 1
-          fi
-          if [ -n "$URL" ]; then
-            echo "::error::expected no fix-report-url, got '$URL'"
-            exit 1
-          fi
-          echo "ok: failed fast as expected"

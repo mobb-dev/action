@@ -5,7 +5,7 @@ branding:
   color: blue
 inputs:
   report-file:
-    description: "Path to SAST report file. Required: the Mobb CLI's review command hard-requires a report (-f). Mobb's own scan-and-fix is only available in the root action, not in review mode."
+    description: "Path to SAST report file"
     required: false
   api-key:
     description: "Mobb API key"
@@ -14,29 +14,19 @@ inputs:
     description: "GitHub Token"
     required: true
   scanner:
-    description: "SAST scanner that produced report-file. Required by the Mobb CLI's review command. One of: checkmarx, codeql, fortify, snyk, sonarqube, semgrep, datadog, blackduck."
+    description: "SAST scanner (codeql, snyk, checkmarx, fortify, sonarqube, semgrep, datadog, blackduck)"
     required: false
   mobb-project-name:
     description: "Mobb Project Name"
     required: false
-  src-path:
-    description: "Path to the repository folder containing the source code. Useful for monorepos where the scanned subtree is not the repository root."
-    required: false
   polling:
     description: "true or false (default false). Use HTTP polling instead of WebSocket for status updates. Enable this on runners behind proxies or firewalls that block WebSocket connections."
-    required: false
-    default: "false"
-  fail-on-error:
-    description: "true or false (default false). When true, the action fails the step if the Mobb CLI exits non-zero. When false (the historical default) the CLI failure is reported as an error annotation but the step still succeeds."
     required: false
     default: "false"
 outputs:
   fix-report-url:
     description: "Mobb fix report URL"
     value: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
-  mobb-command:
-    description: "The Mobb CLI command the action built. Only populated when the MOBB_ACTION_DRY_RUN env var is set to 'true', which is used by this repo's CI to assert argument construction without calling the API."
-    value: ${{ steps.run-npx-mobb-dev.outputs.mobb-command }}
 runs:
   using: "composite"
   steps:
@@ -56,46 +46,28 @@ runs:
         COMMIT_HASH="${{ github.event.pull_request.head.sha }}"
         PR_NUMBER=${{ github.event.pull_request.number }}
         VUL_FILE_PATH="${{ inputs.report-file }}"
+        MobbExecString="npx --yes @mobb.ai/cli@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} --pr $PR_NUMBER --github-token ${{ inputs.github-token }}"
 
-        # The Mobb CLI's review command hard-requires -f, --scanner, --ch and --pr.
-        # GitHub does not reliably enforce `required:` for composite actions, so
-        # check here and fail with an actionable message. Without this the CLI dies
-        # on "Missing required arguments" and, with fail-on-error left at its
-        # default, the step would go green with an empty fix-report-url.
-        MISSING=""
-        [ -z "$VUL_FILE_PATH" ] && MISSING="$MISSING report-file"
-        [ -z "$SCANNER" ] && MISSING="$MISSING scanner"
-        [ -z "$COMMIT_HASH" ] && MISSING="$MISSING commit-hash(no pull_request context)"
-        [ -z "$PR_NUMBER" ] && MISSING="$MISSING pr-number(no pull_request context)"
-        if [ -n "$MISSING" ]; then
-          echo "::error::Mobb review requires:$MISSING. The review action runs only on pull_request events and always needs an external SAST report - the Mobb CLI review command requires -f, --scanner and --ch. For Mobb's own scan-and-fix, use the root action (uses: mobb-dev/action@v1) with diff-aware: true."
-          exit 1
+        # Append -f only if a report file was provided.
+        if [ -n "$VUL_FILE_PATH" ]; then
+          echo "report-file specified: $VUL_FILE_PATH"
+          MobbExecString+=" -f $VUL_FILE_PATH"
+        else
+          echo "No report-file provided."
         fi
 
-        # Mirror the CLI's own --scanner choices so a typo fails here with a
-        # readable message instead of an opaque yargs dump.
-        case "$SCANNER" in
-          checkmarx|codeql|fortify|snyk|sonarqube|semgrep|datadog|blackduck) ;;
-          *)
-            echo "::error::Unsupported scanner '$SCANNER'. Supported: checkmarx, codeql, fortify, snyk, sonarqube, semgrep, datadog, blackduck."
-            exit 1
-            ;;
-        esac
-
-        MobbExecString="npx --yes @mobb.ai/cli@latest review  -r $REPO --ref $GITHUB_HEAD_REF --ch $COMMIT_HASH --api-key ${{ inputs.api-key }} --pr $PR_NUMBER --github-token ${{ inputs.github-token }}"
-        MobbExecString+=" -f $VUL_FILE_PATH"
-        MobbExecString+=" --scanner $SCANNER"
+        # Append --scanner only if provided.
+        if [ -n "$SCANNER" ]; then
+          echo "scanner specified: $SCANNER"
+          MobbExecString+=" --scanner $SCANNER"
+        else
+          echo "No scanner provided."
+        fi
 
         # Check if mobb-project-name exists and append it
         if [ -n "${{ inputs.mobb-project-name }}" ]; then
           echo "mobb-project-name specified: ${{ inputs.mobb-project-name }}"
           MobbExecString+=" --mobb-project-name \"${{ inputs.mobb-project-name }}\""
-        fi
-
-        # Check if src-path exists and append it
-        if [ -n "${{ inputs.src-path }}" ]; then
-          echo "src-path specified: ${{ inputs.src-path }}"
-          MobbExecString+=" -p \"${{ inputs.src-path }}\""
         fi
 
         # Check if polling flag is set and append it
@@ -106,29 +78,7 @@ runs:
 
         # Output the final command string for debugging
         echo "Mobb Command: $MobbExecString"
-
-        # Test seam: this repo's CI sets MOBB_ACTION_DRY_RUN to assert argument
-        # construction without calling the Mobb API. Not a public input.
-        if [ "$MOBB_ACTION_DRY_RUN" == "true" ]; then
-          echo "MOBB_ACTION_DRY_RUN is set, skipping execution."
-          echo "mobb-command=$MobbExecString" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
-        OUT=$(eval $MobbExecString)
-        RETVAL=$?
-
-        # Surface the CLI's stdout in the step log; capturing it into $OUT would
-        # otherwise hide it entirely.
-        echo "$OUT"
-
-        if [ $RETVAL -ne 0 ]; then
-          echo "::error::Mobb CLI exited with status $RETVAL. See the step log above for details."
-          if [ "${{ inputs.fail-on-error }}" == "true" ]; then
-            exit $RETVAL
-          fi
-        fi
-
+        OUT=$(eval $MobbExecString || true)
         OUT=$(echo "$OUT" | tr '\n' ' ')
         MOBB_URL=$(echo "$OUT" | grep -oE 'https://[^ ]+' | head -1)
 

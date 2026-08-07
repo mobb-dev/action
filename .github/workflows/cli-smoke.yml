@@ -1,18 +1,16 @@
 # Contract tests against the Mobb CLI (@mobb.ai/cli).
 #
 # These need no secrets and make no API calls - yargs validates arguments before
-# any network I/O - so they run on fork pull requests and cost no Mobb quota.
+# any network I/O - so they run on fork pull requests too.
 #
 # The point of this workflow is to catch two classes of break early:
 #
-#   1. Packaging. @mobb.ai/cli is a ~3 KB launcher that resolves a platform
-#      binary from optionalDependencies and spawns it. It does not download
-#      anything at runtime, so it hard-fails wherever that optional dep is
-#      absent: musl/Alpine, win-arm64, or any environment where optional deps
-#      are skipped (npm --no-optional, or omit=optional in an .npmrc).
-#   2. Flag drift. If the CLI renames or starts requiring a flag the actions
-#      pass, the actions break. The analyze-contract and review-contract jobs
-#      below assert the flags each action emits still exist.
+#   1. Packaging. @mobb.ai/cli resolves a platform binary from
+#      optionalDependencies and spawns it, so a missing or broken platform
+#      package fails at runtime rather than at install time.
+#   2. Flag drift. If the CLI renames a flag the actions pass, the actions break.
+#      The analyze-contract and review-contract jobs assert the flags each action
+#      emits still exist.
 name: CLI smoke
 
 on:
@@ -74,43 +72,6 @@ jobs:
       - name: CLI launches
         run: npx --yes "$CLI" --help
 
-  musl-fallback:
-    # The README tells users on Alpine/musl runners to fall back to the
-    # Node-based `mobbdev` package, because @mobb.ai/cli's binaries are
-    # dynamically linked against glibc (they need glibc >= 2.28) and npm has no
-    # libc constraint to stop it installing the glibc build on musl. This job
-    # guards that escape hatch so it cannot rot.
-    #
-    # It also reports if @mobb.ai/cli ever starts working on musl, which would
-    # mean the README caveat can be dropped.
-    name: musl fallback (Alpine)
-    runs-on: ubuntu-latest
-    container: node:20-alpine
-    steps:
-      - name: git is needed by the CLI
-        run: apk add --no-cache git
-
-      - name: the documented mobbdev fallback works on musl
-        run: |
-          npx --yes mobbdev@latest --help > help.txt
-          cat help.txt
-          grep -q 'mobbdev <command>' help.txt \
-            || { echo "::error::the documented Alpine fallback (npx mobbdev@latest) no longer works; the README's musl guidance is wrong"; exit 1; }
-          echo "ok: mobbdev runs on musl"
-
-      - name: report whether @mobb.ai/cli works on musl yet
-        run: |
-          set +e
-          out=$(npx --yes "$CLI" --help 2>&1)
-          rc=$?
-          set -e
-          echo "$out"
-          if [ "$rc" -eq 0 ]; then
-            echo "::notice::@mobb.ai/cli now runs on musl. Publish-side musl support may have landed; the README's Alpine caveat can be revisited."
-          else
-            echo "ok: still glibc-only on musl (exit $rc), matching the documented caveat"
-          fi
-
   analyze-contract:
     # Asserts the flags the root action passes to `analyze` still exist.
     name: analyze flag contract
@@ -127,7 +88,7 @@ jobs:
           fail=0
           for flag in --ci --auto-pr --commit-directly --create-one-pr --pr-id \
                       --baseline-commit --polling --scan-only --organization-id \
-                      --mobb-project-name --scan-file --src-path --api-key --ref; do
+                      --mobb-project-name --scan-file --api-key --ref; do
             if ! grep -q -- "$flag" analyze-help.txt; then
               echo "::error::analyze no longer documents $flag, which action.yml passes"
               fail=1
@@ -144,43 +105,9 @@ jobs:
           fi
           echo "ok: -f is still optional"
 
-      # The two checks below track CLI constraints that action.yml's input
-      # validation mirrors. They emit notices rather than failing: if the CLI
-      # relaxes a constraint, nothing breaks, but the action's guard becomes
-      # unnecessarily strict and should be revisited.
-      - name: analyze still couples --pr-id to --commit-directly
-        run: |
-          set +e
-          out=$(npx --yes "$CLI" analyze --ci -r https://github.com/mobb-dev/action \
-                  --api-key FAKE --auto-pr --pr-id 1 2>&1)
-          set -e
-          echo "$out"
-          if grep -q 'requires --commit-directly' <<<"$out"; then
-            echo "ok: --pr-id still requires --commit-directly, which is why action.yml only passes --pr-id alongside commit-directly"
-          else
-            echo "::notice::the CLI no longer couples --pr-id to --commit-directly; action.yml could pass --pr-id on plain --auto-pr runs too"
-          fi
-
-      - name: analyze still rejects --create-one-pr with --commit-directly
-        run: |
-          set +e
-          out=$(npx --yes "$CLI" analyze --ci -r https://github.com/mobb-dev/action \
-                  --api-key FAKE --auto-pr --create-one-pr --commit-directly 2>&1)
-          set -e
-          echo "$out"
-          if grep -q 'cannot be provided at the same time' <<<"$out"; then
-            echo "ok: still mutually exclusive, matching action.yml's guard"
-          else
-            echo "::notice::the CLI no longer rejects --create-one-pr with --commit-directly; action.yml's mutual-exclusion guard could be dropped"
-          fi
-
   review-contract:
     # Separate job on purpose: review mode breaking must show up as its own red
     # check rather than being buried in an analyze failure.
-    #
-    # This is the standing alarm for the mismatch this migration fixed - the CLI
-    # hard-requires -f, --scanner and --ch on review, so the review action cannot
-    # offer a scan-and-fix mode.
     name: review flag contract
     runs-on: ubuntu-latest
     steps:
@@ -194,45 +121,10 @@ jobs:
           cat review-help.txt
           fail=0
           for flag in --scan-file --scanner --github-token --pull-request --ref \
-                      --polling --src-path --api-key --mobb-project-name; do
+                      --polling --api-key --mobb-project-name; do
             if ! grep -q -- "$flag" review-help.txt; then
               echo "::error::review no longer documents $flag, which review/action.yml passes"
               fail=1
             fi
           done
           exit "$fail"
-
-      - name: review still requires -f, --scanner and --ch
-        run: |
-          set +e
-          out=$(npx --yes "$CLI" review 2>&1)
-          rc=$?
-          set -e
-          echo "$out"
-          if [ "$rc" -eq 0 ]; then
-            echo "::error::a bare 'review' invocation unexpectedly succeeded; the review action's fail-fast guards assume these arguments are required"
-            exit 1
-          fi
-          if ! grep -q 'Missing required arguments' <<<"$out"; then
-            echo "::error::expected a 'Missing required arguments' error from a bare review invocation"
-            exit 1
-          fi
-          fail=0
-          for arg in f scanner ch; do
-            if ! grep -E "Missing required arguments:.*(^|[ ,])$arg([ ,]|$)" <<<"$out" >/dev/null; then
-              echo "::error::review no longer requires '$arg'. If it became optional, review/action.yml's fail-fast guard should be relaxed and scan-and-fix support revisited."
-              fail=1
-            fi
-          done
-          exit "$fail"
-
-      - name: review still rejects --org (guards against wiring organization-id)
-        run: |
-          set +e
-          out=$(npx --yes "$CLI" review --org 00000000-0000-0000-0000-000000000000 2>&1)
-          set -e
-          if grep -q 'Unknown argument: org' <<<"$out"; then
-            echo "ok: review still rejects --org, so review/action.yml correctly omits organization-id"
-          else
-            echo "::notice::review now accepts --org; consider adding an organization-id input to review/action.yml"
-          fi

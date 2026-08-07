@@ -1,11 +1,12 @@
 # End-to-end tests for the root (analyze) action against the repo's own
 # intentionally-vulnerable fixtures in java_vuln_files/ and js_vuln_files/.
 #
-# These make real Mobb API calls, so they need MOBB_API_TOKEN and are skipped on
-# fork pull requests, which cannot see secrets.
+# These are real Mobb API calls - no dry runs - so they need MOBB_API_TOKEN and
+# are skipped on fork pull requests, which cannot see secrets.
 #
-# Covers the paths no workflow exercised before: scan-and-fix (no report-file)
-# and diff-aware. Review mode is covered separately by test-review-e2e.yml.
+# Covers the paths no workflow exercised before: scan-and-fix (no report-file),
+# polling, scan-only and diff-aware. Fix-only mode is covered by main.yml, and
+# review mode by test-review-e2e.yml.
 name: Test analyze E2E
 
 on:
@@ -21,7 +22,7 @@ defaults:
 
 jobs:
   scan-and-fix:
-    name: scan-and-fix (no report-file)
+    name: scan-and-fix (${{ matrix.leg }})
     # Fork PRs have no access to MOBB_API_TOKEN, so skip rather than fail red.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
@@ -29,6 +30,14 @@ jobs:
     permissions:
       statuses: write
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: default
+            polling: "false"
+          - leg: polling
+            polling: "true"
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +47,7 @@ jobs:
           api-key: ${{ secrets.MOBB_API_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           mobb-project-name: "action-ci-scan-and-fix"
+          polling: ${{ matrix.polling }}
 
       - name: assert a fix report URL was produced
         env:
@@ -80,6 +90,33 @@ jobs:
             https://*) echo "ok: $URL" ;;
             *) echo "::error::no fix report URL was produced (got '$URL')"; exit 1 ;;
           esac
+
+  scan-only:
+    name: scan-only
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      statuses: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # scan-only reports findings without generating fixes, so this asserts the
+      # run completes rather than asserting a fix report URL.
+      - id: mobb
+        uses: ./
+        with:
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-scan-only"
+          scan-only: "true"
+
+      - name: report the URL if one was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          echo "scan-only completed. URL: '${URL:-none}'"
 
   auto-pr:
     name: auto-pr + create-one-pr (manual only)

@@ -4,10 +4,10 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 This repo contains two actions:
 
-- **The root action** (`mobb-dev/action@v1`) runs Mobb's `analyze` command. It supports:
+- **The root action** (`mobb-dev/action@v1.1`) runs Mobb's `analyze` command. It supports:
   - **Fix-only mode (default)**: provide an existing SAST report via `report-file` and Mobb generates fixes for the findings.
   - **Scan-and-fix mode**: omit `report-file` and the Mobb CLI runs its own SAST scan before producing fixes. Combine with `diff-aware: true` on pull requests to limit the scan to changes since the PR base commit.
-- **The review action** (`mobb-dev/action/review@v1`) runs Mobb's `review` command, which comments fixes directly onto a pull request. It always requires an external SAST report — see [Review action](#review-action) below.
+- **The review action** (`mobb-dev/action/review@v1.1`) runs Mobb's `review` command, which comments fixes directly onto a pull request. It always requires an external SAST report — see [Review action](#review-action) below.
 
 ## Requirements
 
@@ -50,15 +50,11 @@ For other environments, you can invoke the CLI directly with `npx mobbdev@latest
 
 ## `create-one-pr`
 
-**Optional** `true` or `false` (default `false`). Opens a single unified pull request containing all fixes instead of one pull request per fix. Requires `auto-pr` to be set to `true`, and **cannot be combined with `commit-directly`** — one opens a pull request, the other bypasses pull requests entirely. The action fails fast on either mistake.
+**Optional** `true` or `false` (default `false`). Opens a single unified pull request containing all fixes instead of one pull request per fix. Requires `auto-pr` to be set to `true`. Use this or `commit-directly`, not both.
 
 ## `organization-id`
 
 **Optional** The Organization ID to use with the Mobb platform. If not specified, the default organization will be used.
-
-## `src-path`
-
-**Optional** Path to the folder containing the source code to analyze. Useful in monorepos where the code you want scanned is not at the repository root.
 
 ## `polling`
 
@@ -114,7 +110,7 @@ jobs:
 
       - name: Run Mobb on the findings and get fixes
         if: always()
-        uses: mobb-dev/action@v1
+        uses: mobb-dev/action@v1.1
         with:
           report-file: "cx_result.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
@@ -146,7 +142,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Mobb scan-and-fix
-        uses: mobb-dev/action@v1
+        uses: mobb-dev/action@v1.1
         with:
           # report-file intentionally omitted -> enables scan-and-fix mode
           api-key: ${{ secrets.MOBB_API_TOKEN }}
@@ -168,15 +164,9 @@ It has stricter requirements than the root action, because the Mobb CLI's `revie
 - **`scanner` is required**, and must be one of `checkmarx`, `codeql`, `fortify`, `snyk`, `sonarqube`, `semgrep`, `datadog`, `blackduck`.
 - **It only runs on `pull_request` events**, since it needs the PR number and head commit SHA.
 
-The action validates all of the above up front and fails with an explicit error rather than letting the CLI fail mid-run.
-
 ### Review action inputs
 
-`report-file` (required), `scanner` (required), `api-key` (required), `github-token` (required), `mobb-project-name`, `src-path`, `polling`, and:
-
-## `fail-on-error`
-
-**Optional** `true` or `false` (default `false`). When `true`, the step fails if the Mobb CLI exits non-zero. The default is `false` for backwards compatibility, which means a CLI failure is reported as an error annotation but does not fail your workflow. **Set this to `true` if you want Mobb problems to block the pull request.**
+`report-file`, `scanner`, `api-key`, `github-token`, `mobb-project-name` and `polling`.
 
 `organization-id` is not available on the review action — the Mobb CLI rejects it on `review`.
 
@@ -214,7 +204,7 @@ jobs:
           output: results
 
       - name: Run Mobb on the findings and get fixes
-        uses: mobb-dev/action/review@v1
+        uses: mobb-dev/action/review@v1.1
         with:
           report-file: results/javascript.sarif
           scanner: codeql
@@ -224,6 +214,12 @@ jobs:
 
 ## Versioning
 
-Pin to a released tag for reproducible builds, for example `mobb-dev/action@v1.2`. The floating `v1` tag tracks the latest stable release.
+Use `@v1.1`, the active release tag:
+
+```yaml
+uses: mobb-dev/action@v1.1
+# or, for the review action
+uses: mobb-dev/action/review@v1.1
+```
 
 > The `v1` tag currently lags behind the released `v1.x` tags. If you need scan-and-fix, `diff-aware`, or any of the newer inputs today, pin to the specific tag that contains them.

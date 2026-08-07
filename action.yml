@@ -29,15 +29,12 @@ inputs:
   organization-id:
     description: "Organization ID"
     required: false
-  src-path:
-    description: "Path to the repository folder containing the source code. Useful for monorepos where the scanned subtree is not the repository root."
-    required: false
   polling:
     description: "true or false (default false). Use HTTP polling instead of WebSocket for status updates. Enable this on runners behind proxies or firewalls that block WebSocket connections."
     required: false
     default: "false"
   scan-only:
-    description: "true or false (default false). Run the Mobb scan and report findings without generating fixes. Fix-related flags (auto-pr, commit-directly, create-one-pr) are ignored by the CLI in this mode."
+    description: "true or false (default false). Run the Mobb scan and report findings without generating fixes."
     required: false
     default: "false"
   diff-aware:
@@ -49,9 +46,6 @@ outputs:
   fix-report-url:
     description: "Mobb fix report URL"
     value: ${{ steps.run-npx-mobb-dev.outputs.fix-report-url }}
-  mobb-command:
-    description: "The Mobb CLI command the action built. Only populated when the MOBB_ACTION_DRY_RUN env var is set to 'true', which is used by this repo's CI to assert argument construction without calling the API."
-    value: ${{ steps.run-npx-mobb-dev.outputs.mobb-command }}
 runs:
   using: "composite"
   steps:
@@ -67,23 +61,6 @@ runs:
         REPO=$(git remote get-url origin)
         REPO=${REPO%".git"}
         BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-
-        # Validate input combinations the Mobb CLI rejects, so the failure is a
-        # readable error here rather than a CLI error after setup work has run.
-        #
-        # create-one-pr is only meaningful alongside --auto-pr.
-        if [ "${{ inputs.create-one-pr }}" == "true" ] && [ "${{ inputs.auto-pr }}" != "true" ]; then
-          echo "::error::create-one-pr requires auto-pr to be set to true."
-          exit 1
-        fi
-
-        # The CLI rejects --create-one-pr together with --commit-directly:
-        # "--create-one-pr and --commit-directly cannot be provided at the same
-        # time". One opens a single PR, the other bypasses PRs entirely.
-        if [ "${{ inputs.create-one-pr }}" == "true" ] && [ "${{ inputs.commit-directly }}" == "true" ]; then
-          echo "::error::create-one-pr and commit-directly are mutually exclusive: create-one-pr opens a single pull request for all fixes, while commit-directly bypasses pull requests and commits to the branch. Set only one."
-          exit 1
-        fi
 
         MobbExecString="npx --yes @mobb.ai/cli@latest analyze --ci -r $REPO --ref $BRANCH --api-key ${{ inputs.api-key }}"
 
@@ -105,12 +82,6 @@ runs:
         if [ -n "${{ inputs.organization-id }}" ]; then
           echo "organization-id specified: ${{ inputs.organization-id }}"
           MobbExecString+=" --organization-id \"${{ inputs.organization-id }}\""
-        fi
-
-        # Check if src-path exists and append it
-        if [ -n "${{ inputs.src-path }}" ]; then
-          echo "src-path specified: ${{ inputs.src-path }}"
-          MobbExecString+=" -p \"${{ inputs.src-path }}\""
         fi
 
         # Check if auto-pr flag is set append it
@@ -165,24 +136,10 @@ runs:
 
         # Output the final command string for debugging and execute it
         echo "Mobb Command: $MobbExecString"
-
-        # Test seam: this repo's CI sets MOBB_ACTION_DRY_RUN to assert argument
-        # construction without calling the Mobb API. Not a public input.
-        if [ "$MOBB_ACTION_DRY_RUN" == "true" ]; then
-          echo "MOBB_ACTION_DRY_RUN is set, skipping execution."
-          echo "mobb-command=$MobbExecString" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-
         OUT=$(eval $MobbExecString)
+
         RETVAL=$?
-
-        # Surface the CLI's stdout in the step log; capturing it into $OUT would
-        # otherwise hide it entirely.
-        echo "$OUT"
-
         if [ $RETVAL -ne 0 ]; then
-          echo "::error::Mobb CLI exited with status $RETVAL. See the step log above for details."
           exit $RETVAL
         fi
         OUT=$(echo "$OUT" | tr '\n' ' ')
