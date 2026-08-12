@@ -4,10 +4,10 @@ This action posts the code and a SAST report to the Mobb vulnerability analysis 
 
 This repo contains two actions:
 
-- **The root action** (`mobb-dev/action@v1.1`) runs Mobb's `analyze` command. It supports:
+- **The root action** (`mobb-dev/action@v1.2`) runs Mobb's `analyze` command. It supports:
   - **Fix-only mode (default)**: provide an existing SAST report via `report-file` and Mobb generates fixes for the findings.
   - **Scan-and-fix mode**: omit `report-file` and the Mobb CLI runs its own SAST scan before producing fixes. Combine with `diff-aware: true` on pull requests to limit the scan to changes since the PR base commit.
-- **The review action** (`mobb-dev/action/review@v1.1`) runs Mobb's `review` command, which comments fixes directly onto a pull request. It always requires an external SAST report — see [Review action](#review-action) below.
+- **The review action** (`mobb-dev/action/review@v1.2`) runs Mobb's `review` command, which comments fixes directly onto a pull request. It always requires an external SAST report — see [Review action](#review-action) below.
 
 ## Requirements
 
@@ -110,7 +110,7 @@ jobs:
 
       - name: Run Mobb on the findings and get fixes
         if: always()
-        uses: mobb-dev/action@v1.1
+        uses: mobb-dev/action@v1.2
         with:
           report-file: "cx_result.json"
           api-key: ${{ secrets.MOBB_API_TOKEN }}
@@ -142,7 +142,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Mobb scan-and-fix
-        uses: mobb-dev/action@v1.1
+        uses: mobb-dev/action@v1.2
         with:
           # report-file intentionally omitted -> enables scan-and-fix mode
           api-key: ${{ secrets.MOBB_API_TOKEN }}
@@ -204,7 +204,7 @@ jobs:
           output: results
 
       - name: Run Mobb on the findings and get fixes
-        uses: mobb-dev/action/review@v1.1
+        uses: mobb-dev/action/review@v1.2
         with:
           report-file: results/javascript.sarif
           scanner: codeql
@@ -214,12 +214,10 @@ jobs:
 
 ## Versioning
 
-Use `@v1.1`, the active release tag:
+Use `@v1.2`, the active release tag:
 
 ```yaml
-uses: mobb-dev/action@v1.1
+uses: mobb-dev/action@v1.2
 # or, for the review action
-uses: mobb-dev/action/review@v1.1
+uses: mobb-dev/action/review@v1.2
 ```
-
-> The `v1` tag currently lags behind the released `v1.x` tags. If you need scan-and-fix, `diff-aware`, or any of the newer inputs today, pin to the specific tag that contains them.
