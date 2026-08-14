@@ -1,0 +1,71 @@
+# End-to-end test for the review action (GitHub Fixer): run CodeQL, hand the
+# SARIF to Mobb, and require that it comes back with a fix report.
+#
+# This is a real Mobb API call - no dry run - so it needs MOBB_API_TOKEN and is
+# skipped on fork pull requests.
+#
+# Deliberately a separate workflow from the analyze-mode E2E tests. Review mode
+# has its own failure modes, and when it breaks that should be an unambiguous
+# red check named "review", not a line buried in an analyze failure.
+#
+# The review action keeps its historical non-blocking behaviour (a CLI failure
+# does not fail the step), so the fix-report-url assertion below is what turns a
+# CLI problem into a red check here in CI.
+name: Test review E2E
+
+on:
+  pull_request:
+  schedule:
+    # Daily, so a CLI-side regression surfaces even with no open pull request.
+    - cron: "53 6 * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  review:
+    name: CodeQL findings reviewed by Mobb
+    # Fork PRs have no access to MOBB_API_TOKEN, so skip rather than fail red.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      pull-requests: write
+      statuses: write
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+          output: results
+
+      - name: Run Mobb review on the findings
+        id: mobb
+        uses: ./review
+        with:
+          report-file: results/javascript.sarif
+          scanner: codeql
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-review"
+
+      - name: assert a fix report URL was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          case "$URL" in
+            https://*) echo "ok: $URL" ;;
+            *) echo "::error::review mode produced no fix report URL (got '$URL')"; exit 1 ;;
+          esac

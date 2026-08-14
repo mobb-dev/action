@@ -1,0 +1,130 @@
+# Contract tests against the Mobb CLI (@mobb.ai/cli).
+#
+# These need no secrets and make no API calls - yargs validates arguments before
+# any network I/O - so they run on fork pull requests too.
+#
+# The point of this workflow is to catch two classes of break early:
+#
+#   1. Packaging. @mobb.ai/cli resolves a platform binary from
+#      optionalDependencies and spawns it, so a missing or broken platform
+#      package fails at runtime rather than at install time.
+#   2. Flag drift. If the CLI renames a flag the actions pass, the actions break.
+#      The analyze-contract and review-contract jobs assert the flags each action
+#      emits still exist.
+name: CLI smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # Daily, so CLI-side regressions surface even with no open pull request.
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CLI: "@mobb.ai/cli@latest"
+
+jobs:
+  binary-ubuntu:
+    # Required leg. Ubuntu is what the actions actually run on, so this must be
+    # green for the migration to be considered working.
+    name: binary smoke (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: CLI launches and lists its subcommands
+        run: |
+          npx --yes "$CLI" --help > help.txt
+          cat help.txt
+          fail=0
+          for cmd in scan analyze review add-scm-token convert-to-sarif; do
+            if ! grep -q "mobbdev $cmd" help.txt; then
+              echo "::error::subcommand '$cmd' is missing from the CLI"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
+  binary-other-os:
+    # Informational only: a packaging gap on macOS or Windows is worth seeing but
+    # must not block a PR, since the composite actions are bash-only and run on
+    # Linux. Note this leg exercises the CLI itself, not the actions.
+    name: binary smoke (${{ matrix.os }}, informational)
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: CLI launches
+        run: npx --yes "$CLI" --help
+
+  analyze-contract:
+    # Asserts the flags the root action passes to `analyze` still exist.
+    name: analyze flag contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: analyze still documents every flag the root action passes
+        run: |
+          npx --yes "$CLI" analyze --help > analyze-help.txt
+          cat analyze-help.txt
+          fail=0
+          for flag in --ci --auto-pr --commit-directly --create-one-pr --pr-id \
+                      --baseline-commit --polling --scan-only --organization-id \
+                      --mobb-project-name --scan-file --api-key --ref; do
+            if ! grep -q -- "$flag" analyze-help.txt; then
+              echo "::error::analyze no longer documents $flag, which action.yml passes"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
+      - name: analyze keeps -f optional so scan-and-fix mode still works
+        run: |
+          npx --yes "$CLI" analyze --help > analyze-help.txt
+          if grep -- '--scan-file' analyze-help.txt | grep -q '\[required\]'; then
+            echo "::error::analyze -f/--scan-file became required; the root action's scan-and-fix mode (omitting report-file) is broken"
+            exit 1
+          fi
+          echo "ok: -f is still optional"
+
+  review-contract:
+    # Separate job on purpose: review mode breaking must show up as its own red
+    # check rather than being buried in an analyze failure.
+    name: review flag contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: review still documents every flag the review action passes
+        run: |
+          npx --yes "$CLI" review --help > review-help.txt
+          cat review-help.txt
+          fail=0
+          for flag in --scan-file --scanner --github-token --pull-request --ref \
+                      --polling --api-key --mobb-project-name; do
+            if ! grep -q -- "$flag" review-help.txt; then
+              echo "::error::review no longer documents $flag, which review/action.yml passes"
+              fail=1
+            fi
+          done
+          exit "$fail"

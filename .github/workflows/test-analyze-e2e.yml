@@ -1,0 +1,151 @@
+# End-to-end tests for the root (analyze) action against the repo's own
+# intentionally-vulnerable fixtures in java_vuln_files/ and js_vuln_files/.
+#
+# These are real Mobb API calls - no dry runs - so they need MOBB_API_TOKEN and
+# are skipped on fork pull requests, which cannot see secrets.
+#
+# Covers the paths no workflow exercised before: scan-and-fix (no report-file),
+# polling, scan-only and diff-aware. Fix-only mode is covered by main.yml, and
+# review mode by test-review-e2e.yml.
+name: Test analyze E2E
+
+on:
+  pull_request:
+  schedule:
+    # Daily, so a CLI-side regression surfaces even with no open pull request.
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  scan-and-fix:
+    name: scan-and-fix (${{ matrix.leg }})
+    # Fork PRs have no access to MOBB_API_TOKEN, so skip rather than fail red.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      statuses: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: default
+            polling: "false"
+          - leg: polling
+            polling: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: mobb
+        uses: ./
+        with:
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-scan-and-fix"
+          polling: ${{ matrix.polling }}
+
+      - name: assert a fix report URL was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          case "$URL" in
+            https://*) echo "ok: $URL" ;;
+            *) echo "::error::no fix report URL was produced (got '$URL')"; exit 1 ;;
+          esac
+
+  diff-aware:
+    name: scan-and-fix + diff-aware
+    # --baseline-commit needs a PR base SHA, so this leg is pull_request only.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      statuses: write
+      contents: read
+    steps:
+      # Full history so the baseline commit is reachable; the CLI fails loudly on
+      # an unreachable --baseline-commit.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: mobb
+        uses: ./
+        with:
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-diff-aware"
+          diff-aware: "true"
+
+      - name: assert a fix report URL was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          case "$URL" in
+            https://*) echo "ok: $URL" ;;
+            *) echo "::error::no fix report URL was produced (got '$URL')"; exit 1 ;;
+          esac
+
+  scan-only:
+    name: scan-only
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      statuses: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # scan-only reports findings without generating fixes, so this asserts the
+      # run completes rather than asserting a fix report URL.
+      - id: mobb
+        uses: ./
+        with:
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-scan-only"
+          scan-only: "true"
+
+      - name: report the URL if one was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          echo "scan-only completed. URL: '${URL:-none}'"
+
+  auto-pr:
+    name: auto-pr + create-one-pr (manual only)
+    # Manual only: this writes pull requests into this repository, so it must not
+    # run automatically on every PR or on a schedule.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      statuses: write
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: mobb
+        uses: ./
+        with:
+          api-key: ${{ secrets.MOBB_API_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          mobb-project-name: "action-ci-auto-pr"
+          auto-pr: "true"
+          create-one-pr: "true"
+
+      - name: assert a fix report URL was produced
+        env:
+          URL: ${{ steps.mobb.outputs.fix-report-url }}
+        run: |
+          case "$URL" in
+            https://*) echo "ok: $URL" ;;
+            *) echo "::error::no fix report URL was produced (got '$URL')"; exit 1 ;;
+          esac
